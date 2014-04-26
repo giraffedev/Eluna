@@ -275,7 +275,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_PACKET, 0, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_PACKET, 0, ev, functionRef);
         return 0;
     }
 
@@ -286,7 +286,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_SERVER, 0, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_SERVER, 0, ev, functionRef);
         return 0;
     }
 
@@ -297,7 +297,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_PLAYER, 0, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_PLAYER, 0, ev, functionRef);
         return 0;
     }
 
@@ -308,7 +308,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_GUILD, 0, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_GUILD, 0, ev, functionRef);
         return 0;
     }
 
@@ -319,7 +319,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_GROUP, 0, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_GROUP, 0, ev, functionRef);
         return 0;
     }
 
@@ -331,7 +331,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_CREATURE_GOSSIP, entry, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_CREATURE_GOSSIP, entry, ev, functionRef);
         return 0;
     }
 
@@ -343,7 +343,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_GAMEOBJECT_GOSSIP, entry, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_GAMEOBJECT_GOSSIP, entry, ev, functionRef);
         return 0;
     }
 
@@ -355,7 +355,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_ITEM, entry, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_ITEM, entry, ev, functionRef);
         return 0;
     }
 
@@ -367,7 +367,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_ITEM_GOSSIP, entry, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_ITEM_GOSSIP, entry, ev, functionRef);
         return 0;
     }
 
@@ -379,7 +379,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_PLAYER_GOSSIP, menu_id, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_PLAYER_GOSSIP, menu_id, ev, functionRef);
         return 0;
     }
 
@@ -391,7 +391,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_CREATURE, entry, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_CREATURE, entry, ev, functionRef);
         return 0;
     }
 
@@ -403,7 +403,7 @@ namespace LuaGlobalFunctions
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = lua_ref(L, true);
         if (functionRef > 0)
-            Eluna::Register(REGTYPE_GAMEOBJECT, entry, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_GAMEOBJECT, entry, ev, functionRef);
         return 0;
     }
 
@@ -512,7 +512,7 @@ namespace LuaGlobalFunctions
         if (functionRef)
             Eluna::Push(L, functionRef);
         else
-            Eluna::Push(L, );
+            Eluna::Push(L);
         return 1;
     }
 

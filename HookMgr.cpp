@@ -237,42 +237,42 @@ public:
 
     void OnOpenStateChange(bool open) OVERRIDE
     {
-        Eluna::World.OnOpenStateChange(open);
+        Eluna::GEluna.OnOpenStateChange(open);
     }
 
     void OnConfigLoad(bool reload) OVERRIDE
     {
-        Eluna::World.OnConfigLoad(reload);
+        Eluna::GEluna.OnConfigLoad(reload);
     }
 
     void OnMotdChange(std::string& newMotd) OVERRIDE
     {
-        Eluna::World.OnMotdChange(newMotd);
+        Eluna::GEluna.OnMotdChange(newMotd);
     }
 
     void OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask) OVERRIDE
     {
-        Eluna::World.OnShutdownInitiate(code, mask);
+        Eluna::GEluna.OnShutdownInitiate(code, mask);
     }
 
     void OnShutdownCancel() OVERRIDE
     {
-        Eluna::World.OnShutdownCancel();
+        Eluna::GEluna.OnShutdownCancel();
     }
 
     void OnUpdate(uint32 diff) OVERRIDE
     {
-        Eluna::World.OnUpdate(diff);
+        Eluna::GEluna.OnUpdate(diff);
     }
 
     void OnStartup() OVERRIDE
     {
-        Eluna::World.OnStartup();
+        Eluna::GEluna.OnStartup();
     }
 
     void OnShutdown() OVERRIDE
     {
-        Eluna::World.OnShutdown();
+        Eluna::GEluna.OnShutdown();
     }
 };
 #endif
@@ -1008,17 +1008,6 @@ void Eluna::OnUpdateZone(Player* pPlayer, uint32 newZone, uint32 newArea)
     PlayerEventBindings.EndCall();
 }
 
-void Eluna::OnMapChanged(Player* player)
-{
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_MAP_CHANGE))
-        return;
-    ELUNA_GUARD();
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_MAP_CHANGE);
-    Push(L, player);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
-}
-
 bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg)
 {
     if (lang == LANG_ADDON && OnAddonMessage(pPlayer, type, msg, NULL, NULL, NULL, NULL))
@@ -1599,21 +1588,6 @@ bool Eluna::OnQuestAccept(Player* pPlayer, Creature* pCreature, Quest const* pQu
     ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_QUEST_ACCEPT);
-    Push(L, pPlayer);
-    Push(L, pCreature);
-    Push(L, pQuest);
-    ExecuteCall(4, 0);
-    return true;
-}
-
-bool Eluna::OnQuestSelect(Player* pPlayer, Creature* pCreature, Quest const* pQuest)
-{
-    int bind = CreatureEventBindings.GetBind(pCreature->GetEntry(), CREATURE_EVENT_ON_QUEST_SELECT);
-    if (!bind)
-        return false;
-    ELUNA_GUARD();
-    BeginCall(bind);
-    Push(L, CREATURE_EVENT_ON_QUEST_SELECT);
     Push(L, pPlayer);
     Push(L, pCreature);
     Push(L, pQuest);

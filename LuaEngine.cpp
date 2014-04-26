@@ -11,7 +11,8 @@
 extern void RegisterFunctions(lua_State* L);
 extern void AddElunaScripts();
 
-Eluna Eluna::World(NULL);
+Eluna Eluna::GEluna(NULL);
+EventMgr Eluna::m_EventMgr;
 
 Eluna::Eluna(Map* _map):
 map(_map),
@@ -836,7 +837,7 @@ bool Eluna::EntryBind::HasBinds(uint32 entryId) const
 }
 
 EventMgr::LuaEvent::LuaEvent(EventProcessor* _events, int _funcRef, uint32 _delay, uint32 _calls, Object* _obj):
-events(_events), funcRef(_funcRef), delay(_delay), calls(_calls), obj(_obj)
+events(_events), funcRef(_funcRef), delay(_delay), calls(_calls), obj(_obj->GetGUID())
 {
     if (_events)
         Eluna::m_EventMgr.LuaEvents[_events].insert(this); // Able to access the event if we have the processor

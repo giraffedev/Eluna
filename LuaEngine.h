@@ -300,7 +300,7 @@ struct EventMgr
         int funcRef;    // Lua function reference ID, also used as event ID
         uint32 delay;   // Delay between event calls
         uint32 calls;   // Amount of calls to make, 0 for infinite
-        Object* obj;    // Object to push
+        uint64 obj;     // Object to push
     };
 
     // Should be run on world tick
@@ -504,7 +504,8 @@ public:
         ElunaEntryMap Bindings; // Binding store Bindings[entryId][eventId] = funcRef;
     };
 
-    static Eluna World; // global lua state for world events
+    static EventMgr m_EventMgr;
+    static Eluna GEluna; // only use for threadunsafe hooks (world update)
     typedef UNORDERED_MAP<lua_State*, Eluna*> ElunaMapData;
     static ElunaMapData ElunaMap;
     static Eluna* GetEluna(lua_State* L)
@@ -525,7 +526,6 @@ public:
 
     Map* map;
     lua_State* L;
-    EventMgr m_EventMgr;
 
     Eluna(Map* _map);
     ~Eluna();
@@ -624,7 +624,6 @@ public:
     bool OnGossipSelect(Player* pPlayer, Creature* pCreature, uint32 sender, uint32 action);
     bool OnGossipSelectCode(Player* pPlayer, Creature* pCreature, uint32 sender, uint32 action, const char* code);
     bool OnQuestAccept(Player* pPlayer, Creature* pCreature, Quest const* pQuest);
-    bool OnQuestSelect(Player* pPlayer, Creature* pCreature, Quest const* pQuest);
     bool OnQuestComplete(Player* pPlayer, Creature* pCreature, Quest const* pQuest);
     bool OnQuestReward(Player* pPlayer, Creature* pCreature, Quest const* pQuest);
     uint32 GetDialogStatus(Player* pPlayer, Creature* pCreature);
@@ -711,7 +710,6 @@ public:
     void OnSave(Player* pPlayer);
     void OnBindToInstance(Player* pPlayer, Difficulty difficulty, uint32 mapid, bool permanent);
     void OnUpdateZone(Player* pPlayer, uint32 newZone, uint32 newArea);
-    void OnMapChanged(Player* pPlayer);
     void HandleGossipSelectOption(Player* pPlayer, uint32 menuId, uint32 sender, uint32 action, std::string code);
 
 #ifndef CLASSIC
@@ -815,6 +813,10 @@ template<> Creature* Eluna::CHECKOBJ<Creature>(lua_State* L, int narg, bool erro
 template<> GameObject* Eluna::CHECKOBJ<GameObject>(lua_State* L, int narg, bool error);
 template<> Corpse* Eluna::CHECKOBJ<Corpse>(lua_State* L, int narg, bool error);
 
+// MUST be called when thread safe (no map updates running)
+#define FOREACH_ELUNA() \
+    for (Eluna::ElunaMapData::const_iterator it = Eluna::ElunaMap.begin(); it != Eluna::ElunaMap.end(); ++it) \
+    it->second
 #define ELUNA_GUARD() /*\
 ACE_Guard< ACE_Recursive_Thread_Mutex > ELUNA_GUARD_OBJECT(Eluna::lock);*/
 

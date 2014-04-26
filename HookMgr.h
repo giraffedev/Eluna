@@ -171,7 +171,7 @@ enum PlayerEvents
     PLAYER_EVENT_ON_SAVE                    =     25,       // (event, player)
     PLAYER_EVENT_ON_BIND_TO_INSTANCE        =     26,       // (event, player, difficulty, mapid, permanent)
     PLAYER_EVENT_ON_UPDATE_ZONE             =     27,       // (event, player, newZone, newArea)
-    PLAYER_EVENT_ON_MAP_CHANGE              =     28,       // (event, player)
+    // UNUSED                               =     28,       // (event, player)
 
     // Custom
     PLAYER_EVENT_ON_EQUIP                   =     29,       // (event, player, item, bag, slot)
@@ -272,7 +272,7 @@ enum CreatureEvents
     // UNUSED                                         = 29, // (event, creature)
     CREATURE_EVENT_ON_DUMMY_EFFECT                    = 30, // (event, caster, spellid, effindex, creature)
     CREATURE_EVENT_ON_QUEST_ACCEPT                    = 31, // (event, player, creature, quest)
-    CREATURE_EVENT_ON_QUEST_SELECT                    = 32, // (event, player, creature, quest)
+    // UNUSED                                         = 32, // (event, creature)
     CREATURE_EVENT_ON_QUEST_COMPLETE                  = 33, // (event, player, creature, quest)
     CREATURE_EVENT_ON_QUEST_REWARD                    = 34, // (event, player, creature, quest, opt)
     CREATURE_EVENT_ON_DIALOG_STATUS                   = 35, // (event, player, creature)

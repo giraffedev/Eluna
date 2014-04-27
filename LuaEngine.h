@@ -301,7 +301,7 @@ struct LuaEvent : public BasicEvent
     int funcRef;    // Lua function reference ID, also used as event ID
     uint32 delay;   // Delay between event calls
     uint32 calls;   // Amount of calls to make, 0 for infinite
-    uint64 obj;     // Object to push
+    WorldObject* obj;   // Object to push
     Eluna* E;       // State containing lua function to run (using Eluna to avoid locking)
 };
 

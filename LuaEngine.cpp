@@ -850,7 +850,7 @@ bool EntryBind::HasBinds(uint32 entryId) const
 }
 
 LuaEvent::LuaEvent(Eluna* _E, int _funcRef, uint32 _delay, uint32 _calls, EventProcessor* _events, WorldObject* _obj):
-E(_E), funcRef(_funcRef), delay(_delay), calls(_calls), events(_events), obj(_obj->GetGUID())
+E(_E), funcRef(_funcRef), delay(_delay), calls(_calls), events(_events), obj(_obj)
 {
     if (events)
     {

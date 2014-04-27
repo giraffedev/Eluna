@@ -132,6 +132,8 @@ typedef ThreatContainer::StorageType ThreatList;
 #endif
 #endif
 
+class Eluna;
+
 template<typename T>
 struct ElunaRegister
 {
@@ -262,7 +264,18 @@ public:
         ElunaRegister<T>* l = static_cast<ElunaRegister<T>*>(lua_touserdata(L, lua_upvalueindex(1)));
         if (!obj)
             return 0;
-        return l->mfunc(L, obj);
+        int args = lua_gettop(L);
+        int expected = l->mfunc(L, obj);
+        args = lua_gettop(L) - args;
+        if (args <= 0 || args > expected)
+        {
+            if (args < 0 || args > expected) // Assert instead?
+                ELUNA_LOG_ERROR("[Eluna]: %s returned unexpected amount of arguments %i out of %i. Report to devs", l->name, args, expected);
+            return expected;
+        }
+        for (; args < expected; ++args)
+            lua_pushnil(L);
+        return expected;
     }
 
     static int tostringT(lua_State* L)
@@ -275,257 +288,167 @@ public:
     }
 };
 
+struct LuaEvent : public BasicEvent
+{
+    LuaEvent(Eluna* _E, int _funcRef, uint32 _delay, uint32 _calls, EventProcessor* _events, WorldObject* _obj = NULL);
+
+    ~LuaEvent();
+
+    // Should never execute on dead events
+    bool Execute(uint64 time, uint32 diff);
+
+    EventProcessor* events; // Pointer to events (holds the timed event)
+    int funcRef;    // Lua function reference ID, also used as event ID
+    uint32 delay;   // Delay between event calls
+    uint32 calls;   // Amount of calls to make, 0 for infinite
+    uint64 obj;     // Object to push
+    Eluna* E;       // State containing lua function to run (using Eluna to avoid locking)
+};
+
+template <typename K, typename V>
+class RWHashMap
+{
+public:
+
+    typedef UNORDERED_MAP<K, V> MapType;
+    typedef ACE_RW_Thread_Mutex LockType;
+
+    static void Insert(K key, V value)
+    {
+        ACE_Write_Guard< LockType > GUARD(lock); \
+            if (GUARD.locked() == 0) ASSERT(false);
+        hashmaop[key] = value;
+    }
+
+    static void Remove(K key)
+    {
+        ACE_Write_Guard< LockType > GUARD(lock); \
+            if (GUARD.locked() == 0) ASSERT(false);
+        hashmaop.erase(key);
+    }
+
+    static V Find(K key)
+    {
+        ACE_Read_Guard< LockType > GUARD(lock); \
+            if (GUARD.locked() == 0) ASSERT(false);
+        typename MapType::iterator itr = hashmaop.find(key);
+        return (itr != hashmaop.end()) ? itr->second : NULL;
+    }
+
+    static MapType& GetContainer() { return hashmaop; }
+
+    static LockType* GetLock() { return &lock; }
+
+private:
+    RWHashMap() {}
+
+    static LockType lock;
+    static MapType hashmaop;
+};
+
 struct EventMgr
 {
-    struct LuaEvent;
-
     typedef std::set<LuaEvent*> EventSet;
     typedef std::map<EventProcessor*, EventSet> EventMap;
-    // typedef UNORDERED_MAP<uint64, EventProcessor> ProcessorMap;
 
     EventMap LuaEvents; // LuaEvents[processor] = {LuaEvent, LuaEvent...}
-    // ProcessorMap Processors; // Processors[guid] = processor
     EventProcessor GlobalEvents;
 
-    struct LuaEvent : public BasicEvent
-    {
-        LuaEvent(EventProcessor* _events, int _funcRef, uint32 _delay, uint32 _calls, Object* _obj);
-
-        ~LuaEvent();
-
-        // Should never execute on dead events
-        bool Execute(uint64 time, uint32 diff);
-
-        EventProcessor* events; // Pointer to events (holds the timed event)
-        int funcRef;    // Lua function reference ID, also used as event ID
-        uint32 delay;   // Delay between event calls
-        uint32 calls;   // Amount of calls to make, 0 for infinite
-        uint64 obj;     // Object to push
-    };
+    ~EventMgr();
 
     // Should be run on world tick
-    void Update(uint32 diff)
-    {
-        GlobalEvents.Update(diff);
-    }
-
-    // Updates processor stored for guid || remove from Update()
-    // Should be run on gameobject tick
-    /*void Update(uint64 guid, uint32 diff)
-    {
-    if (Processors.find(guid) == Processors.end())
-    return;
-    Processors[guid].Update(diff);
-    }*/
+    void Update(uint32 diff);
 
     // Aborts all lua events
-    void KillAllEvents(EventProcessor* events)
-    {
-        if (!events)
-            return;
-        if (LuaEvents.empty())
-            return;
-        EventMap::const_iterator it = LuaEvents.find(events); // Get event set
-        if (it == LuaEvents.end())
-            return;
-        if (it->second.empty())
-            return;
-        for (EventSet::const_iterator itr = it->second.begin(); itr != it->second.end();) // Loop events
-            (*(itr++))->to_Abort = true; // Abort event
-    }
+    void KillAllEvents(EventProcessor* events);
 
     // Remove all timed events
-    void RemoveEvents()
-    {
-        if (!LuaEvents.empty())
-            for (EventMap::const_iterator it = LuaEvents.begin(); it != LuaEvents.end();) // loop processors
-                KillAllEvents((it++)->first);
-        LuaEvents.clear(); // remove pointers
-        // This is handled automatically on delete
-        // for (ProcessorMap::iterator it = Processors.begin(); it != Processors.end();)
-        //    (it++)->second.KillAllEvents(true);
-        // Processors.clear(); // remove guid saved processors
-        GlobalEvents.KillAllEvents(true);
-    }
+    void RemoveEvents();
 
     // Remove timed events from processor
-    void RemoveEvents(EventProcessor* events)
-    {
-        if (!events)
-            return;
-        KillAllEvents(events);
-        LuaEvents.erase(events); // remove pointer set
-    }
-
-    // Remove timed events from guid
-    // void RemoveEvents(uint64 guid)
-    //{
-    //    if (Processors.empty())
-    //        return;
-    //    if (Processors.find(guid) != Processors.end())
-    //        LuaEvents.erase(&Processors[guid]);
-    //    // Processors[guid].KillAllEvents(true); // remove events
-    //    Processors.erase(guid); // remove processor
-    //}
+    void RemoveEvents(EventProcessor* events);
 
     // Adds a new event to the processor and returns the eventID or 0 (Never negative)
-    int AddEvent(EventProcessor* events, int funcRef, uint32 delay, uint32 calls, Object* obj = NULL)
-    {
-        if (!events || funcRef <= 0) // If funcRef <= 0, function reference failed
-            return 0; // on fail always return 0. funcRef can be negative.
-        events->AddEvent(new LuaEvent(events, funcRef, delay, calls, obj), events->CalculateTime(delay));
-        return funcRef; // return the event ID
-    }
-
-    // Creates a processor for the guid if needed and adds the event to it
-    // int AddEvent(uint64 guid, int funcRef, uint32 delay, uint32 calls, Object* obj = NULL)
-    //{
-    //    if (!guid) // 0 should be unused
-    //        return 0;
-    //    return AddEvent(&Processors[guid], funcRef, delay, calls, obj);
-    //}
+    int AddEvent(Eluna* E, int funcRef, uint32 delay, uint32 calls, EventProcessor* events, WorldObject* obj = NULL);
 
     // Finds the event that has the ID from events
-    LuaEvent* GetEvent(EventProcessor* events, int eventId)
-    {
-        if (!events || !eventId)
-            return NULL;
-        if (LuaEvents.empty())
-            return NULL;
-        EventMap::const_iterator it = LuaEvents.find(events); // Get event set
-        if (it == LuaEvents.end())
-            return NULL;
-        if (it->second.empty())
-            return NULL;
-        for (EventSet::const_iterator itr = it->second.begin(); itr != it->second.end(); ++itr) // Loop events
-            if ((*itr) && (*itr)->funcRef == eventId) // Check if the event has our ID
-                return *itr; // Return the event if found
-        return NULL;
-    }
+    LuaEvent* GetEvent(EventProcessor* events, int eventId);
 
     // Remove the event with the eventId from processor
     // Returns true if event is removed
-    bool RemoveEvent(EventProcessor* events, int eventId) // eventId = funcRef
-    {
-        if (!events || !eventId)
-            return false;
-        LuaEvent* luaEvent = GetEvent(events, eventId);
-        if (!luaEvent)
-            return false;
-        luaEvent->to_Abort = true; // Set to remove on next call
-        LuaEvents[events].erase(luaEvent); // Remove pointer
-        return true;
-    }
-
-    // Remove event by ID from processor stored for guid
-    /*bool RemoveEvent(uint64 guid, int eventId)
-    {
-    if (Processors.empty())
-    return false;
-    if (!guid || Processors.find(guid) == Processors.end())
-    return false;
-    return RemoveEvent(&Processors[guid], eventId);
-    }*/
+    bool RemoveEvent(EventProcessor* events, int eventId); // eventId = funcRef
 
     // Removes the eventId from all events
-    void RemoveEvent(int eventId)
-    {
-        if (!eventId)
-            return;
-        if (LuaEvents.empty())
-            return;
-        for (EventMap::const_iterator it = LuaEvents.begin(); it != LuaEvents.end();) // loop processors
-            if (RemoveEvent((it++)->first, eventId))
-                break; // succesfully remove the event, stop loop.
-    }
+    void RemoveEvent(int eventId);
+};
 
-    ~EventMgr()
-    {
-        RemoveEvents();
-    }
+struct EventBind
+{
+    typedef std::vector<int> ElunaBindingMap;
+    typedef std::map<int, ElunaBindingMap> ElunaEntryMap;
+    Eluna& eluna;
+
+    EventBind(Eluna& _eluna): eluna(_eluna) {}
+    ~EventBind() { Clear(); }
+
+    void Clear(); // unregisters all registered functions and clears all registered events from the bind std::maps (reset)
+    void Insert(int eventId, int funcRef); // Inserts a new registered event
+
+    // Gets the binding std::map containing all registered events with the function refs for the entry
+    ElunaBindingMap* GetBindMap(int eventId);
+
+    // Checks if there are events for ID
+    bool HasEvents(int eventId) const;
+    // Cleans stack and pushes eventId
+    void BeginCall(int eventId) const;
+    // Loops through all registered events for the eventId at stack index 1
+    // Copies the whole stack as arguments for the called function. Before Executing, push all params to stack!
+    // Leaves return values from all functions in order to the stack.
+    void ExecuteCall();
+    void EndCall() const;
+
+    ElunaEntryMap Bindings; // Binding store Bindings[eventId] = {funcRef};
+};
+
+struct EntryBind
+{
+    typedef std::map<int, int> ElunaBindingMap;
+    typedef std::map<uint32, ElunaBindingMap> ElunaEntryMap;
+    Eluna& eluna;
+
+    EntryBind(Eluna& _eluna): eluna(_eluna) {}
+    ~EntryBind() { Clear(); }
+
+    void Clear(); // unregisters all registered functions and clears all registered events from the bind std::maps (reset)
+    void Insert(uint32 entryId, int eventId, int funcRef); // Inserts a new registered event
+
+    // Gets the function ref of an entry for an event
+    int GetBind(uint32 entryId, int eventId) const;
+
+    // Gets the binding std::map containing all registered events with the function refs for the entry
+    const ElunaBindingMap* GetBindMap(uint32 entryId) const;
+
+    // Returns true if the entry has registered binds
+    bool HasBinds(uint32 entryId) const;
+
+    ElunaEntryMap Bindings; // Binding store Bindings[entryId][eventId] = funcRef;
 };
 
 class Eluna
 {
-public:
-    //friend class ScriptMgr;
-    //friend class ACE_Singleton<Eluna, ACE_Null_Mutex>;
-    //ACE_Recursive_Thread_Mutex lock;
-
-    struct EventBind
-    {
-        typedef std::vector<int> ElunaBindingMap;
-        typedef std::map<int, ElunaBindingMap> ElunaEntryMap;
-        Eluna& eluna;
-
-        EventBind(Eluna& _eluna): eluna(_eluna) {}
-        ~EventBind() { Clear(); }
-
-        void Clear(); // unregisters all registered functions and clears all registered events from the bind std::maps (reset)
-        void Insert(int eventId, int funcRef); // Inserts a new registered event
-
-        // Gets the binding std::map containing all registered events with the function refs for the entry
-        ElunaBindingMap* GetBindMap(int eventId);
-
-        // Checks if there are events for ID
-        bool HasEvents(int eventId) const;
-        // Cleans stack and pushes eventId
-        void BeginCall(int eventId) const;
-        // Loops through all registered events for the eventId at stack index 1
-        // Copies the whole stack as arguments for the called function. Before Executing, push all params to stack!
-        // Leaves return values from all functions in order to the stack.
-        void ExecuteCall();
-        void EndCall() const;
-
-        ElunaEntryMap Bindings; // Binding store Bindings[eventId] = {funcRef};
-    };
-
-    struct EntryBind
-    {
-        typedef std::map<int, int> ElunaBindingMap;
-        typedef std::map<uint32, ElunaBindingMap> ElunaEntryMap;
-        Eluna& eluna;
-
-        EntryBind(Eluna& _eluna): eluna(_eluna) {}
-        ~EntryBind() { Clear(); }
-
-        void Clear(); // unregisters all registered functions and clears all registered events from the bind std::maps (reset)
-        void Insert(uint32 entryId, int eventId, int funcRef); // Inserts a new registered event
-
-        // Gets the function ref of an entry for an event
-        int GetBind(uint32 entryId, int eventId) const;
-
-        // Gets the binding std::map containing all registered events with the function refs for the entry
-        const ElunaBindingMap* GetBindMap(uint32 entryId) const;
-
-        // Returns true if the entry has registered binds
-        bool HasBinds(uint32 entryId) const;
-
-        ElunaEntryMap Bindings; // Binding store Bindings[entryId][eventId] = funcRef;
-    };
-
-    static EventMgr m_EventMgr;
-    static Eluna GEluna; // only use for threadunsafe hooks (world update)
-    typedef UNORDERED_MAP<lua_State*, Eluna*> ElunaMapData;
+private:
+    typedef RWHashMap<lua_State*, Eluna*> ElunaMapData;
     static ElunaMapData ElunaMap;
-    static Eluna* GetEluna(lua_State* L)
-    {
-        if (ElunaMap.find(L) != ElunaMap.end())
-            return ElunaMap[L];
-        return NULL;
-    }
-    static Eluna* GetEluna(Map* map)
-    {
-        if (!map)
-            return NULL;
-        for (ElunaMapData::const_iterator it = ElunaMap.begin(); it != ElunaMap.end(); ++it)
-            if (it->second->map == map)
-                return it->second;
-        return NULL;
-    }
 
-    Map* map;
+public:
+
+    static Eluna GEluna; // only use for threadunsafe hooks (world update)
+    static Eluna* GetEluna(lua_State* L); // thread safe
+    //static Eluna* GetEluna(Map* map);
+
+    Map* GMap; // NULL for global state
     lua_State* L;
+    EventMgr m_EventMgr;
 
     Eluna(Map* _map);
     ~Eluna();
@@ -813,10 +736,6 @@ template<> Creature* Eluna::CHECKOBJ<Creature>(lua_State* L, int narg, bool erro
 template<> GameObject* Eluna::CHECKOBJ<GameObject>(lua_State* L, int narg, bool error);
 template<> Corpse* Eluna::CHECKOBJ<Corpse>(lua_State* L, int narg, bool error);
 
-// MUST be called when thread safe (no map updates running)
-#define FOREACH_ELUNA() \
-    for (Eluna::ElunaMapData::const_iterator it = Eluna::ElunaMap.begin(); it != Eluna::ElunaMap.end(); ++it) \
-    it->second
 #define ELUNA_GUARD() /*\
 ACE_Guard< ACE_Recursive_Thread_Mutex > ELUNA_GUARD_OBJECT(Eluna::lock);*/
 

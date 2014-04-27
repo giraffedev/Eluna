@@ -148,26 +148,37 @@ namespace LuaGameObject
         uint32 delay = Eluna::CHECKVAL<uint32>(L, 3);
         uint32 repeats = Eluna::CHECKVAL<uint32>(L, 4);
 
+        Eluna* E = Eluna::GetEluna(L);
+        if (!E)
+            return 1;
+
         lua_settop(L, 2);
-        int functionRef = lua_ref(L, true);
-        functionRef = Eluna::m_EventMgr.AddEvent(&go->m_Events, functionRef, delay, repeats, go);
+        int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        functionRef = E->m_EventMgr.AddEvent(E, functionRef, delay, repeats, &go->m_Events, go);
         if (functionRef)
             Eluna::Push(L, functionRef);
-        else
-            Eluna::Push(L);
         return 1;
     }
 
     int RemoveEventById(lua_State* L, GameObject* go)
     {
         int eventId = Eluna::CHECKVAL<int>(L, 2);
-        Eluna::m_EventMgr.RemoveEvent(&go->m_Events, eventId);
+
+        Eluna* E = Eluna::GetEluna(L);
+        if (!E)
+            return 0;
+
+        E->m_EventMgr.RemoveEvent(&go->m_Events, eventId);
         return 0;
     }
 
     int RemoveEvents(lua_State* L, GameObject* go)
     {
-        Eluna::m_EventMgr.RemoveEvents(&go->m_Events);
+        Eluna* E = Eluna::GetEluna(L);
+        if (!E)
+            return 0;
+
+        E->m_EventMgr.RemoveEvents(&go->m_Events);
         return 0;
     }
 

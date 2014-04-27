@@ -11,11 +11,27 @@
 extern void RegisterFunctions(lua_State* L);
 extern void AddElunaScripts();
 
+template <typename K, typename V> UNORDERED_MAP< K, V > RWHashMap<K, V>::hashmaop;
+template <typename K, typename V> typename RWHashMap< K, V >::LockType RWHashMap<K, V>::lock;
+template class RWHashMap<lua_State*, Eluna*>;
 Eluna Eluna::GEluna(NULL);
-EventMgr Eluna::m_EventMgr;
+
+Eluna* Eluna::GetEluna(lua_State* L)
+{
+    return ElunaMap.Find(L);
+}
+//Eluna* Eluna::GetEluna(Map* map)
+//{
+//    if (!map)
+//        return NULL;
+//    for (ElunaMapData::const_iterator it = ElunaMap.begin(); it != ElunaMap.end(); ++it)
+//        if (it->second->map == map)
+//            return it->second;
+//    return NULL;
+//}
 
 Eluna::Eluna(Map* _map):
-map(_map),
+GMap(_map),
 L(luaL_newstate()),
 PacketEventBindings(*this),
 ServerEventBindings(*this),
@@ -33,9 +49,7 @@ ItemGossipBindings(*this),
 playerGossipBindings(*this)
 {
     ELUNA_LOG_DEBUG("[Eluna]: Creating new lua state");
-    if (ElunaMap.find(L) != ElunaMap.end())
-        delete ElunaMap[L];
-    ElunaMap[L] = this;
+    ElunaMap.Insert(L, this);
     luaL_openlibs(L);
     RegisterFunctions(L);
 
@@ -77,8 +91,7 @@ playerGossipBindings(*this)
 Eluna::~Eluna()
 {
     ELUNA_LOG_DEBUG("[Eluna]: Closing lua state");
-    if (ElunaMap.find(L) != ElunaMap.end())
-        ElunaMap.erase(L);
+    ElunaMap.Remove(L);
 
     // Unregisters and stops all timed events
     m_EventMgr.RemoveEvents();
@@ -717,7 +730,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     luaL_error(L, "Unknown event type (regtype %d, id %d, event %d)", regtype, id, evt);
 }
 
-void Eluna::EventBind::Clear()
+void EventBind::Clear()
 {
     for (ElunaEntryMap::iterator itr = Bindings.begin(); itr != Bindings.end(); ++itr)
     {
@@ -728,12 +741,12 @@ void Eluna::EventBind::Clear()
     Bindings.clear();
 }
 
-void Eluna::EventBind::Insert(int eventId, int funcRef)
+void EventBind::Insert(int eventId, int funcRef)
 {
     Bindings[eventId].push_back(funcRef);
 }
 
-Eluna::EventBind::ElunaBindingMap* Eluna::EventBind::GetBindMap(int eventId)
+EventBind::ElunaBindingMap* EventBind::GetBindMap(int eventId)
 {
     if (Bindings.empty())
         return NULL;
@@ -744,7 +757,7 @@ Eluna::EventBind::ElunaBindingMap* Eluna::EventBind::GetBindMap(int eventId)
     return &itr->second;
 }
 
-bool Eluna::EventBind::HasEvents(int eventId) const
+bool EventBind::HasEvents(int eventId) const
 {
     if (Bindings.empty())
         return false;
@@ -753,13 +766,13 @@ bool Eluna::EventBind::HasEvents(int eventId) const
     return true;
 }
 
-void Eluna::EventBind::BeginCall(int eventId) const
+void EventBind::BeginCall(int eventId) const
 {
     lua_settop(eluna.L, 0); // stack should be empty
     eluna.Push(eluna.L, eventId);
 }
 
-void Eluna::EventBind::ExecuteCall()
+void EventBind::ExecuteCall()
 {
     int eventId = eluna.CHECKVAL<int>(eluna.L, 1);
     int params = lua_gettop(eluna.L);
@@ -776,12 +789,12 @@ void Eluna::EventBind::ExecuteCall()
     // Results in stack, otherwise stack clean
 }
 
-void Eluna::EventBind::EndCall() const
+void EventBind::EndCall() const
 {
     lua_settop(eluna.L, 0); // stack should be empty
 };
 
-void Eluna::EntryBind::Clear()
+void EntryBind::Clear()
 {
     for (ElunaEntryMap::iterator itr = Bindings.begin(); itr != Bindings.end(); ++itr)
     {
@@ -792,7 +805,7 @@ void Eluna::EntryBind::Clear()
     Bindings.clear();
 }
 
-void Eluna::EntryBind::Insert(uint32 entryId, int eventId, int funcRef)
+void EntryBind::Insert(uint32 entryId, int eventId, int funcRef)
 {
     if (Bindings[entryId][eventId])
     {
@@ -803,7 +816,7 @@ void Eluna::EntryBind::Insert(uint32 entryId, int eventId, int funcRef)
         Bindings[entryId][eventId] = funcRef;
 }
 
-int Eluna::EntryBind::GetBind(uint32 entryId, int eventId) const
+int EntryBind::GetBind(uint32 entryId, int eventId) const
 {
     if (Bindings.empty())
         return 0;
@@ -817,7 +830,7 @@ int Eluna::EntryBind::GetBind(uint32 entryId, int eventId) const
 }
 
 // Gets the binding std::map containing all registered events with the function refs for the entry
-const Eluna::EntryBind::ElunaBindingMap* Eluna::EntryBind::GetBindMap(uint32 entryId) const
+const EntryBind::ElunaBindingMap* EntryBind::GetBindMap(uint32 entryId) const
 {
     if (Bindings.empty())
         return NULL;
@@ -829,47 +842,143 @@ const Eluna::EntryBind::ElunaBindingMap* Eluna::EntryBind::GetBindMap(uint32 ent
 }
 
 // Returns true if the entry has registered binds
-bool Eluna::EntryBind::HasBinds(uint32 entryId) const
+bool EntryBind::HasBinds(uint32 entryId) const
 {
     if (Bindings.empty())
         return false;
     return Bindings.find(entryId) != Bindings.end();
 }
 
-EventMgr::LuaEvent::LuaEvent(EventProcessor* _events, int _funcRef, uint32 _delay, uint32 _calls, Object* _obj):
-events(_events), funcRef(_funcRef), delay(_delay), calls(_calls), obj(_obj->GetGUID())
+LuaEvent::LuaEvent(Eluna* _E, int _funcRef, uint32 _delay, uint32 _calls, EventProcessor* _events, WorldObject* _obj):
+E(_E), funcRef(_funcRef), delay(_delay), calls(_calls), events(_events), obj(_obj->GetGUID())
 {
-    if (_events)
-        Eluna::m_EventMgr.LuaEvents[_events].insert(this); // Able to access the event if we have the processor
+    if (events)
+    {
+        E->m_EventMgr.LuaEvents[events].insert(this); // Able to access the event if we have the processor
+    }
 }
 
-EventMgr::LuaEvent::~LuaEvent()
+LuaEvent::~LuaEvent()
 {
     if (events)
     {
         // Attempt to remove the pointer from LuaEvents
-        EventMgr::EventMap::const_iterator it = Eluna::m_EventMgr.LuaEvents.find(events); // Get event set
-        if (it != Eluna::m_EventMgr.LuaEvents.end())
-            Eluna::m_EventMgr.LuaEvents[events].erase(this);// Remove pointer
+        EventMgr::EventMap::const_iterator it = E->m_EventMgr.LuaEvents.find(events); // Get event set
+        if (it != E->m_EventMgr.LuaEvents.end())
+            E->m_EventMgr.LuaEvents[events].erase(this);// Remove pointer
     }
-    luaL_unref(eluna.L, LUA_REGISTRYINDEX, funcRef); // Free lua function ref
+    luaL_unref(E->L, LUA_REGISTRYINDEX, funcRef); // Free lua function ref
 }
 
-bool EventMgr::LuaEvent::Execute(uint64 time, uint32 diff)
+bool LuaEvent::Execute(uint64 time, uint32 diff)
 {
     ELUNA_GUARD();
     bool remove = (calls == 1);
     if (!remove)
         events->AddEvent(this, events->CalculateTime(delay)); // Reschedule before calling incase RemoveEvents used
-    Eluna::BeginCall(funcRef);
-    Eluna::Push(L, funcRef);
-    Eluna::Push(L, delay);
-    Eluna::Push(L, calls);
+    E->BeginCall(funcRef);
+    E->Push(E->L, funcRef);
+    E->Push(E->L, delay);
+    E->Push(E->L, calls);
     if (!remove && calls)
         --calls;
-    Eluna::Push(L, obj);
-    Eluna::ExecuteCall(4, 0);
+    E->Push(E->L, obj);
+    E->ExecuteCall(4, 0);
     return remove; // Destory (true) event if not run
+}
+
+EventMgr::~EventMgr()
+{
+    RemoveEvents();
+}
+
+void EventMgr::Update(uint32 diff)
+{
+    GlobalEvents.Update(diff);
+}
+
+void EventMgr::KillAllEvents(EventProcessor* events)
+{
+    if (!events)
+        return;
+    if (LuaEvents.empty())
+        return;
+    EventMap::const_iterator it = LuaEvents.find(events); // Get event set
+    if (it == LuaEvents.end())
+        return;
+    if (it->second.empty())
+        return;
+    for (EventSet::const_iterator itr = it->second.begin(); itr != it->second.end();) // Loop events
+        (*(itr++))->to_Abort = true; // Abort event
+}
+
+void EventMgr::RemoveEvents()
+{
+    if (!LuaEvents.empty())
+        for (EventMap::const_iterator it = LuaEvents.begin(); it != LuaEvents.end();) // loop processors
+            KillAllEvents((it++)->first);
+    LuaEvents.clear(); // remove pointers
+    // This is handled automatically on delete
+    // for (ProcessorMap::iterator it = Processors.begin(); it != Processors.end();)
+    //    (it++)->second.KillAllEvents(true);
+    // Processors.clear(); // remove guid saved processors
+    GlobalEvents.KillAllEvents(true);
+}
+
+void EventMgr::RemoveEvents(EventProcessor* events)
+{
+    if (!events)
+        return;
+    KillAllEvents(events);
+    LuaEvents.erase(events); // remove pointer set
+}
+
+int EventMgr::AddEvent(Eluna* E, int funcRef, uint32 delay, uint32 calls, EventProcessor* events, WorldObject* obj)
+{
+    if (!events || funcRef <= 0) // If funcRef <= 0, function reference failed
+        return 0; // on fail always return 0. funcRef can be negative.
+    events->AddEvent(new LuaEvent(E, funcRef, delay, calls, events, obj), events->CalculateTime(delay));
+    return funcRef; // return the event ID
+}
+
+LuaEvent* EventMgr::GetEvent(EventProcessor* events, int eventId)
+{
+    if (!events || !eventId)
+        return NULL;
+    if (LuaEvents.empty())
+        return NULL;
+    EventMap::const_iterator it = LuaEvents.find(events); // Get event set
+    if (it == LuaEvents.end())
+        return NULL;
+    if (it->second.empty())
+        return NULL;
+    for (EventSet::const_iterator itr = it->second.begin(); itr != it->second.end(); ++itr) // Loop events
+        if ((*itr) && (*itr)->funcRef == eventId) // Check if the event has our ID
+            return *itr; // Return the event if found
+    return NULL;
+}
+
+bool EventMgr::RemoveEvent(EventProcessor* events, int eventId)
+{
+    if (!events || !eventId)
+        return false;
+    LuaEvent* luaEvent = GetEvent(events, eventId);
+    if (!luaEvent)
+        return false;
+    luaEvent->to_Abort = true; // Set to remove on next call
+    LuaEvents[events].erase(luaEvent); // Remove pointer
+    return true;
+}
+
+void EventMgr::RemoveEvent(int eventId)
+{
+    if (!eventId)
+        return;
+    if (LuaEvents.empty())
+        return;
+    for (EventMap::const_iterator it = LuaEvents.begin(); it != LuaEvents.end();) // loop processors
+        if (RemoveEvent((it++)->first, eventId))
+            break; // succesfully remove the event, stop loop.
 }
 
 // Lua taxi helper functions

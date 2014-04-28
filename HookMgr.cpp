@@ -4,27 +4,25 @@
 * Please see the included DOCS/LICENSE.md for more information
 */
 
-#include "LuaEngine.h"
 #include "HookMgr.h"
+#include "LuaEngine.h"
+#include "Includes.h"
+
+void Eluna::OnStateMessage(StateMsg* msg)
+{
+    if (!ServerEventBindings.HasEvents(ELUNA_EVENT_ON_STATE_MSG))
+        return;
+    ServerEventBindings.BeginCall(ELUNA_EVENT_ON_STATE_MSG);
+    msg->Push(L);
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
+}
 
 void Eluna::OnEngineRestart()
 {
     if (!ServerEventBindings.HasEvents(ELUNA_EVENT_ON_RESTART))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(ELUNA_EVENT_ON_RESTART);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
-}
-
-void Eluna::OnWorldUpdate(uint32 diff)
-{
-    m_EventMgr.Update(diff);
-    if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_UPDATE))
-        return;
-    ELUNA_GUARD();
-    ServerEventBindings.BeginCall(WORLD_EVENT_ON_UPDATE);
-    Push(L, diff);
     ServerEventBindings.ExecuteCall();
     ServerEventBindings.EndCall();
 }
@@ -34,7 +32,6 @@ bool Eluna::OnAreaTrigger(Player* pPlayer, AreaTriggerEntry const* pTrigger)
 {
     if (!ServerEventBindings.HasEvents(TRIGGER_EVENT_ON_TRIGGER))
         return false;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(TRIGGER_EVENT_ON_TRIGGER);
     Push(L, pPlayer);
     Push(L, pTrigger->id);
@@ -47,7 +44,6 @@ void Eluna::OnChange(Weather* weather, WeatherState state, float grade)
 {
     if (!ServerEventBindings.HasEvents(WEATHER_EVENT_ON_CHANGE))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(WEATHER_EVENT_ON_CHANGE);
     Push(L, (weather->GetZone()));
     Push(L, state);
@@ -60,7 +56,6 @@ void Eluna::OnAdd(AuctionHouseObject* ah)
 {
     if (!ServerEventBindings.HasEvents(AUCTION_EVENT_ON_ADD))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(AUCTION_EVENT_ON_ADD);
     Push(L, (ah));
     ServerEventBindings.ExecuteCall();
@@ -71,7 +66,6 @@ void Eluna::OnRemove(AuctionHouseObject* ah)
 {
     if (!ServerEventBindings.HasEvents(AUCTION_EVENT_ON_REMOVE))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(AUCTION_EVENT_ON_REMOVE);
     Push(L, (ah));
     ServerEventBindings.ExecuteCall();
@@ -82,7 +76,6 @@ void Eluna::OnSuccessful(AuctionHouseObject* ah)
 {
     if (!ServerEventBindings.HasEvents(AUCTION_EVENT_ON_SUCCESSFUL))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(AUCTION_EVENT_ON_SUCCESSFUL);
     Push(L, (ah));
     ServerEventBindings.ExecuteCall();
@@ -93,7 +86,6 @@ void Eluna::OnExpire(AuctionHouseObject* ah)
 {
     if (!ServerEventBindings.HasEvents(AUCTION_EVENT_ON_EXPIRE))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(AUCTION_EVENT_ON_EXPIRE);
     Push(L, (ah));
     ServerEventBindings.ExecuteCall();
@@ -109,7 +101,6 @@ bool Eluna::OnPacketSend(WorldSession* session, WorldPacket& packet)
         player = session->GetPlayer();
     if (ServerEventBindings.HasEvents(SERVER_EVENT_ON_PACKET_SEND))
     {
-        ELUNA_GUARD();
         ServerEventBindings.BeginCall(SERVER_EVENT_ON_PACKET_SEND);
         Push(L, new WorldPacket(packet));
         Push(L, player);
@@ -130,7 +121,6 @@ bool Eluna::OnPacketSend(WorldSession* session, WorldPacket& packet)
     }
     if (PacketEventBindings.HasEvents(Opcodes(packet.GetOpcode())))
     {
-        ELUNA_GUARD();
         PacketEventBindings.BeginCall(Opcodes(packet.GetOpcode()));
         Push(L, new WorldPacket(packet));
         Push(L, player);
@@ -159,7 +149,6 @@ bool Eluna::OnPacketReceive(WorldSession* session, WorldPacket& packet)
         player = session->GetPlayer();
     if (ServerEventBindings.HasEvents(SERVER_EVENT_ON_PACKET_RECEIVE))
     {
-        ELUNA_GUARD();
         ServerEventBindings.BeginCall(SERVER_EVENT_ON_PACKET_RECEIVE);
         Push(L, new WorldPacket(packet));
         Push(L, player);
@@ -180,7 +169,6 @@ bool Eluna::OnPacketReceive(WorldSession* session, WorldPacket& packet)
     }
     if (PacketEventBindings.HasEvents(Opcodes(packet.GetOpcode())))
     {
-        ELUNA_GUARD();
         PacketEventBindings.BeginCall(Opcodes(packet.GetOpcode()));
         Push(L, new WorldPacket(packet));
         Push(L, player);
@@ -205,8 +193,7 @@ bool Eluna::OnPacketReceive(WorldSession* session, WorldPacket& packet)
 bool Eluna::OnAddonMessage(Player* sender, uint32 type, std::string& msg, Player* receiver, Guild* guild, Group* group, Channel* channel)
 {
     if (!ServerEventBindings.HasEvents(ADDON_EVENT_ON_MESSAGE))
-		return false;
-	ELUNA_GUARD();
+        return false;
     ServerEventBindings.BeginCall(ADDON_EVENT_ON_MESSAGE);
     Push(L, sender);
     Push(L, type);
@@ -223,8 +210,8 @@ bool Eluna::OnAddonMessage(Player* sender, uint32 type, std::string& msg, Player
         Push(L, channel->GetChannelId());
     else
         Push(L);
-	ServerEventBindings.ExecuteCall();
-	ServerEventBindings.EndCall();
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
     return true;
 }
 
@@ -232,7 +219,7 @@ bool Eluna::OnAddonMessage(Player* sender, uint32 type, std::string& msg, Player
 class ElunaWorldAI : public WorldScript
 {
 public:
-    ElunaWorldAI() : WorldScript("ElunaWorldAI") {}
+    ElunaWorldAI(): WorldScript("ElunaWorldAI") {}
     ~ElunaWorldAI() {}
 
     void OnOpenStateChange(bool open) OVERRIDE
@@ -240,37 +227,32 @@ public:
         Eluna::GEluna.OnOpenStateChange(open);
     }
 
-    void OnConfigLoad(bool reload) OVERRIDE
+        void OnConfigLoad(bool reload) OVERRIDE
     {
         Eluna::GEluna.OnConfigLoad(reload);
     }
 
-    void OnMotdChange(std::string& newMotd) OVERRIDE
+        void OnMotdChange(std::string& newMotd) OVERRIDE
     {
         Eluna::GEluna.OnMotdChange(newMotd);
     }
 
-    void OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask) OVERRIDE
+        void OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask) OVERRIDE
     {
         Eluna::GEluna.OnShutdownInitiate(code, mask);
     }
 
-    void OnShutdownCancel() OVERRIDE
+        void OnShutdownCancel() OVERRIDE
     {
         Eluna::GEluna.OnShutdownCancel();
     }
 
-    void OnUpdate(uint32 diff) OVERRIDE
-    {
-        Eluna::GEluna.OnUpdate(diff);
-    }
-
-    void OnStartup() OVERRIDE
+        void OnStartup() OVERRIDE
     {
         Eluna::GEluna.OnStartup();
     }
 
-    void OnShutdown() OVERRIDE
+        void OnShutdown() OVERRIDE
     {
         Eluna::GEluna.OnShutdown();
     }
@@ -281,8 +263,7 @@ public:
 void Eluna::OnOpenStateChange(bool open)
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_OPEN_STATE_CHANGE))
-    return;
-    ELUNA_GUARD();
+        return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_OPEN_STATE_CHANGE);
     Push(L, open);
     ServerEventBindings.ExecuteCall();
@@ -292,8 +273,7 @@ void Eluna::OnOpenStateChange(bool open)
 void Eluna::OnConfigLoad(bool reload)
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_CONFIG_LOAD))
-    return;
-    ELUNA_GUARD();
+        return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_CONFIG_LOAD);
     Push(L, reload);
     ServerEventBindings.ExecuteCall();
@@ -303,8 +283,7 @@ void Eluna::OnConfigLoad(bool reload)
 void Eluna::OnMotdChange(std::string& newMotd)
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_MOTD_CHANGE))
-    return;
-    ELUNA_GUARD();
+        return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_MOTD_CHANGE);
     Push(L, newMotd);
     ServerEventBindings.ExecuteCall();
@@ -314,8 +293,7 @@ void Eluna::OnMotdChange(std::string& newMotd)
 void Eluna::OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask)
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_SHUTDOWN_INIT))
-    return;
-    ELUNA_GUARD();
+        return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_SHUTDOWN_INIT);
     Push(L, code);
     Push(L, mask);
@@ -326,19 +304,28 @@ void Eluna::OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask)
 void Eluna::OnShutdownCancel()
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_SHUTDOWN_CANCEL))
-    return;
-    ELUNA_GUARD();
+        return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_SHUTDOWN_CANCEL);
     ServerEventBindings.ExecuteCall();
     ServerEventBindings.EndCall();
 }
 
-void Eluna::OnUpdate(uint32 diff)
+void Eluna::OnWorldUpdate(uint32 diff)
 {
+    // process sent messages from map states
+    StateMsg* msg = NULL;
+    while (StateMsgQue.next(msg))
+    {
+        if (Eluna* E = msg->GetTarget())
+            E->OnStateMessage(msg);
+        delete msg;
+    }
+
+    // process world tick
     m_EventMgr.Update(diff);
+
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_UPDATE))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_UPDATE);
     Push(L, diff);
     ServerEventBindings.ExecuteCall();
@@ -348,8 +335,7 @@ void Eluna::OnUpdate(uint32 diff)
 void Eluna::OnStartup()
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_STARTUP))
-    return;
-    ELUNA_GUARD();
+        return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_STARTUP);
     ServerEventBindings.ExecuteCall();
     ServerEventBindings.EndCall();
@@ -358,8 +344,7 @@ void Eluna::OnStartup()
 void Eluna::OnShutdown()
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_SHUTDOWN))
-    return;
-    ELUNA_GUARD();
+        return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_SHUTDOWN);
     ServerEventBindings.ExecuteCall();
     ServerEventBindings.EndCall();
@@ -370,7 +355,6 @@ void Eluna::HandleGossipSelectOption(Player* pPlayer, Item* item, uint32 sender,
     int bind = ItemGossipBindings.GetBind(item->GetEntry(), GOSSIP_EVENT_ON_SELECT);
     if (bind)
     {
-        ELUNA_GUARD();
         pPlayer->PlayerTalkClass->ClearMenus();
         BeginCall(bind);
         Push(L, GOSSIP_EVENT_ON_SELECT);
@@ -391,7 +375,6 @@ void Eluna::HandleGossipSelectOption(Player* pPlayer, uint32 menuId, uint32 send
     int bind = playerGossipBindings.GetBind(menuId, GOSSIP_EVENT_ON_SELECT);
     if (bind)
     {
-        ELUNA_GUARD();
         pPlayer->PlayerTalkClass->ClearMenus();
         BeginCall(bind);
         Push(L, GOSSIP_EVENT_ON_SELECT);
@@ -414,7 +397,6 @@ bool Eluna::OnDummyEffect(Unit* pCaster, uint32 spellId, SpellEffIndex effIndex,
     int bind = ItemEventBindings.GetBind(pTarget->GetEntry(), ITEM_EVENT_ON_DUMMY_EFFECT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, ITEM_EVENT_ON_DUMMY_EFFECT);
     Push(L, pCaster);
@@ -430,7 +412,6 @@ bool Eluna::OnQuestAccept(Player* pPlayer, Item* pItem, Quest const* pQuest)
     int bind = ItemEventBindings.GetBind(pItem->GetEntry(), ITEM_EVENT_ON_QUEST_ACCEPT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, ITEM_EVENT_ON_QUEST_ACCEPT);
     Push(L, pPlayer);
@@ -446,7 +427,6 @@ bool Eluna::OnUse(Player* pPlayer, Item* pItem, SpellCastTargets const& targets)
     int bind2 = ItemEventBindings.GetBind(pItem->GetEntry(), ITEM_EVENT_ON_USE);
     if (!bind1 && !bind2)
         return false;
-    ELUNA_GUARD();
     if (bind1)
     {
         pPlayer->PlayerTalkClass->ClearMenus();
@@ -498,7 +478,6 @@ bool Eluna::OnExpire(Player* pPlayer, ItemTemplate const* pProto)
     int bind = ItemEventBindings.GetBind(pProto->ItemId, ITEM_EVENT_ON_EXPIRE);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, ITEM_EVENT_ON_EXPIRE);
     Push(L, pPlayer);
@@ -512,7 +491,6 @@ bool Eluna::OnRemove(Player* pPlayer, Item* item)
     int bind = ItemEventBindings.GetBind(item->GetEntry(), ITEM_EVENT_ON_REMOVE);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, ITEM_EVENT_ON_REMOVE);
     Push(L, pPlayer);
@@ -522,7 +500,6 @@ bool Eluna::OnRemove(Player* pPlayer, Item* item)
 }
 
 // Player
-extern bool StartEluna();
 bool Eluna::OnCommand(Player* player, const char* text)
 {
     std::string fullcmd(text);
@@ -538,8 +515,9 @@ bool Eluna::OnCommand(Player* player, const char* text)
             std::transform(eluna.begin(), eluna.end(), eluna.begin(), ::tolower);
             if (std::string("eluna").find(eluna) == 0)
             {
-                sWorld->SendServerMessage(SERVER_MSG_STRING, "Reloading Eluna...");
-                StartEluna();
+                luaL_error(L, "Reloading is disabled at the moment");
+                // sWorld->SendServerMessage(SERVER_MSG_STRING, "Reloading Eluna...");
+                // StartEluna();
                 return false;
             }
         }
@@ -547,7 +525,6 @@ bool Eluna::OnCommand(Player* player, const char* text)
     bool result = true;
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_COMMAND))
         return result;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_COMMAND);
     Push(L, player);
     Push(L, fullcmd);
@@ -566,7 +543,6 @@ void Eluna::OnLootItem(Player* pPlayer, Item* pItem, uint32 count, uint64 guid)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LOOT_ITEM))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LOOT_ITEM);
     Push(L, pPlayer);
     Push(L, pItem);
@@ -580,7 +556,6 @@ void Eluna::OnLootMoney(Player* pPlayer, uint32 amount)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LOOT_MONEY))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LOOT_MONEY);
     Push(L, pPlayer);
     Push(L, amount);
@@ -592,7 +567,6 @@ void Eluna::OnFirstLogin(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_FIRST_LOGIN))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_FIRST_LOGIN);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -603,7 +577,6 @@ void Eluna::OnRepop(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_REPOP))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_REPOP);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -614,7 +587,6 @@ void Eluna::OnResurrect(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_RESURRECT))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_RESURRECT);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -625,7 +597,6 @@ void Eluna::OnQuestAbandon(Player* pPlayer, uint32 questId)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_QUEST_ABANDON))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_QUEST_ABANDON);
     Push(L, pPlayer);
     Push(L, questId);
@@ -637,7 +608,6 @@ void Eluna::OnGmTicketCreate(Player* pPlayer, std::string& ticketText)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GM_TICKET_CREATE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GM_TICKET_CREATE);
     Push(L, pPlayer);
     Push(L, ticketText);
@@ -649,7 +619,6 @@ void Eluna::OnGmTicketUpdate(Player* pPlayer, std::string& ticketText)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GM_TICKET_UPDATE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GM_TICKET_UPDATE);
     Push(L, pPlayer);
     Push(L, ticketText);
@@ -661,7 +630,6 @@ void Eluna::OnGmTicketDelete(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GM_TICKET_DELETE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GM_TICKET_DELETE);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -672,7 +640,6 @@ void Eluna::OnEquip(Player* pPlayer, Item* pItem, uint8 bag, uint8 slot)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_EQUIP))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_EQUIP);
     Push(L, pPlayer);
     Push(L, pItem);
@@ -687,7 +654,6 @@ InventoryResult Eluna::OnCanUseItem(const Player* pPlayer, uint32 itemEntry)
     InventoryResult result = EQUIP_ERR_OK;
     if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CAN_USE_ITEM))
     {
-        ELUNA_GUARD();
         PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CAN_USE_ITEM);
         Push(L, pPlayer);
         Push(L, itemEntry);
@@ -708,7 +674,6 @@ void Eluna::OnPlayerEnterCombat(Player* pPlayer, Unit* pEnemy)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_ENTER_COMBAT))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_ENTER_COMBAT);
     Push(L, pPlayer);
     Push(L, pEnemy);
@@ -720,7 +685,6 @@ void Eluna::OnPlayerLeaveCombat(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LEAVE_COMBAT))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LEAVE_COMBAT);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -731,7 +695,6 @@ void Eluna::OnPVPKill(Player* pKiller, Player* pKilled)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_KILL_PLAYER))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_KILL_PLAYER);
     Push(L, pKiller);
     Push(L, pKilled);
@@ -743,7 +706,6 @@ void Eluna::OnCreatureKill(Player* pKiller, Creature* pKilled)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_KILL_CREATURE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_KILL_CREATURE);
     Push(L, pKiller);
     Push(L, pKilled);
@@ -755,7 +717,6 @@ void Eluna::OnPlayerKilledByCreature(Creature* pKiller, Player* pKilled)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_KILLED_BY_CREATURE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_KILLED_BY_CREATURE);
     Push(L, pKiller);
     Push(L, pKilled);
@@ -767,7 +728,6 @@ void Eluna::OnLevelChanged(Player* pPlayer, uint8 oldLevel)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LEVEL_CHANGE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LEVEL_CHANGE);
     Push(L, pPlayer);
     Push(L, oldLevel);
@@ -779,7 +739,6 @@ void Eluna::OnFreeTalentPointsChanged(Player* pPlayer, uint32 newPoints)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_TALENTS_CHANGE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_TALENTS_CHANGE);
     Push(L, pPlayer);
     Push(L, newPoints);
@@ -791,7 +750,6 @@ void Eluna::OnTalentsReset(Player* pPlayer, bool noCost)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_TALENTS_RESET))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_TALENTS_RESET);
     Push(L, pPlayer);
     Push(L, noCost);
@@ -803,7 +761,6 @@ void Eluna::OnMoneyChanged(Player* pPlayer, int32& amount)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_MONEY_CHANGE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_MONEY_CHANGE);
     Push(L, pPlayer);
     Push(L, amount);
@@ -815,7 +772,6 @@ void Eluna::OnGiveXP(Player* pPlayer, uint32& amount, Unit* pVictim)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GIVE_XP))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GIVE_XP);
     Push(L, pPlayer);
     Push(L, amount);
@@ -834,7 +790,6 @@ void Eluna::OnReputationChange(Player* pPlayer, uint32 factionID, int32& standin
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_REPUTATION_CHANGE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_REPUTATION_CHANGE);
     Push(L, pPlayer);
     Push(L, factionID);
@@ -854,7 +809,6 @@ void Eluna::OnDuelRequest(Player* pTarget, Player* pChallenger)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_DUEL_REQUEST))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_DUEL_REQUEST);
     Push(L, pTarget);
     Push(L, pChallenger);
@@ -866,7 +820,6 @@ void Eluna::OnDuelStart(Player* pStarter, Player* pChallenger)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_DUEL_START))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_DUEL_START);
     Push(L, pStarter);
     Push(L, pChallenger);
@@ -878,7 +831,6 @@ void Eluna::OnDuelEnd(Player* pWinner, Player* pLoser, DuelCompleteType type)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_DUEL_END))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_DUEL_END);
     Push(L, pWinner);
     Push(L, pLoser);
@@ -891,7 +843,6 @@ void Eluna::OnEmote(Player* pPlayer, uint32 emote)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_EMOTE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_EMOTE);
     Push(L, pPlayer);
     Push(L, emote);
@@ -903,7 +854,6 @@ void Eluna::OnTextEmote(Player* pPlayer, uint32 textEmote, uint32 emoteNum, uint
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_TEXT_EMOTE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_TEXT_EMOTE);
     Push(L, pPlayer);
     Push(L, textEmote);
@@ -917,7 +867,6 @@ void Eluna::OnSpellCast(Player* pPlayer, Spell* pSpell, bool skipCheck)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_SPELL_CAST))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_SPELL_CAST);
     Push(L, pPlayer);
     Push(L, pSpell);
@@ -930,7 +879,6 @@ void Eluna::OnLogin(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LOGIN))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LOGIN);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -941,7 +889,6 @@ void Eluna::OnLogout(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LOGOUT))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LOGOUT);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -952,7 +899,6 @@ void Eluna::OnCreate(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHARACTER_CREATE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHARACTER_CREATE);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -963,7 +909,6 @@ void Eluna::OnDelete(uint32 guidlow)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHARACTER_DELETE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHARACTER_DELETE);
     Push(L, guidlow);
     PlayerEventBindings.ExecuteCall();
@@ -974,7 +919,6 @@ void Eluna::OnSave(Player* pPlayer)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_SAVE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_SAVE);
     Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
@@ -985,7 +929,6 @@ void Eluna::OnBindToInstance(Player* pPlayer, Difficulty difficulty, uint32 mapi
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_BIND_TO_INSTANCE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_BIND_TO_INSTANCE);
     Push(L, pPlayer);
     Push(L, difficulty);
@@ -999,7 +942,6 @@ void Eluna::OnUpdateZone(Player* pPlayer, uint32 newZone, uint32 newArea)
 {
     if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_UPDATE_ZONE))
         return;
-    ELUNA_GUARD();
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_UPDATE_ZONE);
     Push(L, pPlayer);
     Push(L, newZone);
@@ -1015,7 +957,6 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg)
     bool result = true;
     if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHAT))
     {
-        ELUNA_GUARD();
         PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
@@ -1046,7 +987,6 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     bool result = true;
     if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GROUP_CHAT))
     {
-        ELUNA_GUARD();
         PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GROUP_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
@@ -1078,7 +1018,6 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     bool result = true;
     if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GUILD_CHAT))
     {
-        ELUNA_GUARD();
         PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GUILD_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
@@ -1110,7 +1049,6 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     bool result = true;
     if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHANNEL_CHAT))
     {
-        ELUNA_GUARD();
         PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHANNEL_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
@@ -1142,7 +1080,6 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     bool result = true;
     if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_WHISPER))
     {
-        ELUNA_GUARD();
         PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_WHISPER);
         Push(L, pPlayer);
         Push(L, msg);
@@ -1174,7 +1111,6 @@ void Eluna::OnInstall(Vehicle* vehicle)
 {
     if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_INSTALL))
         return;
-    ELUNA_GUARD();
     VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_INSTALL);
     Push(L, vehicle);
     VehicleEventBindings.ExecuteCall();
@@ -1185,7 +1121,6 @@ void Eluna::OnUninstall(Vehicle* vehicle)
 {
     if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_UNINSTALL))
         return;
-    ELUNA_GUARD();
     VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_UNINSTALL);
     Push(L, vehicle);
     VehicleEventBindings.ExecuteCall();
@@ -1196,7 +1131,6 @@ void Eluna::OnInstallAccessory(Vehicle* vehicle, Creature* accessory)
 {
     if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_INSTALL_ACCESSORY))
         return;
-    ELUNA_GUARD();
     VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_INSTALL_ACCESSORY);
     Push(L, vehicle);
     Push(L, accessory);
@@ -1208,7 +1142,6 @@ void Eluna::OnAddPassenger(Vehicle* vehicle, Unit* passenger, int8 seatId)
 {
     if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_ADD_PASSENGER))
         return;
-    ELUNA_GUARD();
     VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_ADD_PASSENGER);
     Push(L, vehicle);
     Push(L, passenger);
@@ -1221,7 +1154,6 @@ void Eluna::OnRemovePassenger(Vehicle* vehicle, Unit* passenger)
 {
     if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_REMOVE_PASSENGER))
         return;
-    ELUNA_GUARD();
     VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_REMOVE_PASSENGER);
     Push(L, vehicle);
     Push(L, passenger);
@@ -1235,7 +1167,6 @@ void Eluna::OnAddMember(Guild* guild, Player* player, uint32 plRank)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_ADD_MEMBER))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_ADD_MEMBER);
     Push(L, guild);
     Push(L, player);
@@ -1248,7 +1179,6 @@ void Eluna::OnRemoveMember(Guild* guild, Player* player, bool isDisbanding)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_REMOVE_MEMBER))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_REMOVE_MEMBER);
     Push(L, guild);
     Push(L, player);
@@ -1261,7 +1191,6 @@ void Eluna::OnMOTDChanged(Guild* guild, const std::string& newMotd)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_MOTD_CHANGE))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_MOTD_CHANGE);
     Push(L, guild);
     Push(L, newMotd);
@@ -1273,7 +1202,6 @@ void Eluna::OnInfoChanged(Guild* guild, const std::string& newInfo)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_INFO_CHANGE))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_INFO_CHANGE);
     Push(L, guild);
     Push(L, newInfo);
@@ -1285,7 +1213,6 @@ void Eluna::OnCreate(Guild* guild, Player* leader, const std::string& name)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_CREATE))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_CREATE);
     Push(L, guild);
     Push(L, leader);
@@ -1298,7 +1225,6 @@ void Eluna::OnDisband(Guild* guild)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_DISBAND))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_DISBAND);
     Push(L, guild);
     GuildEventBindings.ExecuteCall();
@@ -1309,7 +1235,6 @@ void Eluna::OnMemberWitdrawMoney(Guild* guild, Player* player, uint32 &amount, b
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_MONEY_WITHDRAW))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_MONEY_WITHDRAW);
     Push(L, guild);
     Push(L, player);
@@ -1323,7 +1248,6 @@ void Eluna::OnMemberDepositMoney(Guild* guild, Player* player, uint32 &amount)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_MONEY_DEPOSIT))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_MONEY_DEPOSIT);
     Push(L, guild);
     Push(L, player);
@@ -1333,11 +1257,10 @@ void Eluna::OnMemberDepositMoney(Guild* guild, Player* player, uint32 &amount)
 }
 
 void Eluna::OnItemMove(Guild* guild, Player* player, Item* pItem, bool isSrcBank, uint8 srcContainer, uint8 srcSlotId,
-                         bool isDestBank, uint8 destContainer, uint8 destSlotId)
+    bool isDestBank, uint8 destContainer, uint8 destSlotId)
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_ITEM_MOVE))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_ITEM_MOVE);
     Push(L, guild);
     Push(L, player);
@@ -1356,7 +1279,6 @@ void Eluna::OnEvent(Guild* guild, uint8 eventType, uint32 playerGuid1, uint32 pl
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_EVENT))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_EVENT);
     Push(L, guild);
     Push(L, eventType);
@@ -1371,7 +1293,6 @@ void Eluna::OnBankEvent(Guild* guild, uint8 eventType, uint8 tabId, uint32 playe
 {
     if (!GuildEventBindings.HasEvents(GUILD_EVENT_ON_BANK_EVENT))
         return;
-    ELUNA_GUARD();
     GuildEventBindings.BeginCall(GUILD_EVENT_ON_BANK_EVENT);
     Push(L, guild);
     Push(L, eventType);
@@ -1388,7 +1309,6 @@ void Eluna::OnAddMember(Group* group, uint64 guid)
 {
     if (!GroupEventBindings.HasEvents(GROUP_EVENT_ON_MEMBER_ADD))
         return;
-    ELUNA_GUARD();
     GroupEventBindings.BeginCall(GROUP_EVENT_ON_MEMBER_ADD);
     Push(L, group);
     Push(L, guid);
@@ -1400,7 +1320,6 @@ void Eluna::OnInviteMember(Group* group, uint64 guid)
 {
     if (!GroupEventBindings.HasEvents(GROUP_EVENT_ON_MEMBER_INVITE))
         return;
-    ELUNA_GUARD();
     GroupEventBindings.BeginCall(GROUP_EVENT_ON_MEMBER_INVITE);
     Push(L, group);
     Push(L, guid);
@@ -1412,7 +1331,6 @@ void Eluna::OnRemoveMember(Group* group, uint64 guid, uint8 method)
 {
     if (!GroupEventBindings.HasEvents(GROUP_EVENT_ON_MEMBER_REMOVE))
         return;
-    ELUNA_GUARD();
     GroupEventBindings.BeginCall(GROUP_EVENT_ON_MEMBER_REMOVE);
     Push(L, group);
     Push(L, guid);
@@ -1425,7 +1343,6 @@ void Eluna::OnChangeLeader(Group* group, uint64 newLeaderGuid, uint64 oldLeaderG
 {
     if (!GroupEventBindings.HasEvents(GROUP_EVENT_ON_LEADER_CHANGE))
         return;
-    ELUNA_GUARD();
     GroupEventBindings.BeginCall(GROUP_EVENT_ON_LEADER_CHANGE);
     Push(L, group);
     Push(L, newLeaderGuid);
@@ -1438,7 +1355,6 @@ void Eluna::OnDisband(Group* group)
 {
     if (!GroupEventBindings.HasEvents(GROUP_EVENT_ON_DISBAND))
         return;
-    ELUNA_GUARD();
     GroupEventBindings.BeginCall(GROUP_EVENT_ON_DISBAND);
     Push(L, group);
     GroupEventBindings.ExecuteCall();
@@ -1449,7 +1365,6 @@ void Eluna::OnCreate(Group* group, uint64 leaderGuid, GroupType groupType)
 {
     if (!GroupEventBindings.HasEvents(GROUP_EVENT_ON_CREATE))
         return;
-    ELUNA_GUARD();
     GroupEventBindings.BeginCall(GROUP_EVENT_ON_CREATE);
     Push(L, group);
     Push(L, leaderGuid);
@@ -1463,7 +1378,6 @@ void Eluna::OnCreate(Map* map)
 {
     if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_CREATE))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(MAP_EVENT_ON_CREATE);
     Push(L, map);
     ServerEventBindings.ExecuteCall();
@@ -1473,7 +1387,6 @@ void Eluna::OnDestroy(Map* map)
 {
     if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_DESTROY))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(MAP_EVENT_ON_DESTROY);
     Push(L, map);
     ServerEventBindings.ExecuteCall();
@@ -1483,7 +1396,6 @@ void Eluna::OnPlayerEnter(Map* map, Player* player)
 {
     if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_PLAYER_ENTER))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(MAP_EVENT_ON_PLAYER_ENTER);
     Push(L, map);
     Push(L, player);
@@ -1494,18 +1406,20 @@ void Eluna::OnPlayerLeave(Map* map, Player* player)
 {
     if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_PLAYER_LEAVE))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(MAP_EVENT_ON_PLAYER_LEAVE);
     Push(L, map);
     Push(L, player);
     ServerEventBindings.ExecuteCall();
     ServerEventBindings.EndCall();
+
+    // Player's timed events must not trigger from another map in any way
+    m_EventMgr.RemoveEvents(&player->m_Events);
 }
 void Eluna::OnUpdate(Map* map, uint32 diff)
 {
+    m_EventMgr.Update(diff);
     if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_UPDATE))
         return;
-    ELUNA_GUARD();
     ServerEventBindings.BeginCall(MAP_EVENT_ON_UPDATE);
     Push(L, map);
     Push(L, diff);
@@ -1519,7 +1433,6 @@ bool Eluna::OnDummyEffect(Unit* pCaster, uint32 spellId, SpellEffIndex effIndex,
     int bind = CreatureEventBindings.GetBind(pTarget->GetEntry(), CREATURE_EVENT_ON_DUMMY_EFFECT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_DUMMY_EFFECT);
     Push(L, pCaster);
@@ -1535,7 +1448,6 @@ bool Eluna::OnGossipHello(Player* pPlayer, Creature* pCreature)
     int bind = CreatureGossipBindings.GetBind(pCreature->GetEntry(), GOSSIP_EVENT_ON_HELLO);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     pPlayer->PlayerTalkClass->ClearMenus();
     BeginCall(bind);
     Push(L, GOSSIP_EVENT_ON_HELLO);
@@ -1550,7 +1462,6 @@ bool Eluna::OnGossipSelect(Player* pPlayer, Creature* pCreature, uint32 sender, 
     int bind = CreatureGossipBindings.GetBind(pCreature->GetEntry(), GOSSIP_EVENT_ON_SELECT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     pPlayer->PlayerTalkClass->ClearMenus();
     BeginCall(bind);
     Push(L, GOSSIP_EVENT_ON_SELECT);
@@ -1567,7 +1478,6 @@ bool Eluna::OnGossipSelectCode(Player* pPlayer, Creature* pCreature, uint32 send
     int bind = CreatureGossipBindings.GetBind(pCreature->GetEntry(), GOSSIP_EVENT_ON_SELECT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     pPlayer->PlayerTalkClass->ClearMenus();
     BeginCall(bind);
     Push(L, GOSSIP_EVENT_ON_SELECT);
@@ -1585,7 +1495,6 @@ bool Eluna::OnQuestAccept(Player* pPlayer, Creature* pCreature, Quest const* pQu
     int bind = CreatureEventBindings.GetBind(pCreature->GetEntry(), CREATURE_EVENT_ON_QUEST_ACCEPT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_QUEST_ACCEPT);
     Push(L, pPlayer);
@@ -1600,7 +1509,6 @@ bool Eluna::OnQuestComplete(Player* pPlayer, Creature* pCreature, Quest const* p
     int bind = CreatureEventBindings.GetBind(pCreature->GetEntry(), CREATURE_EVENT_ON_QUEST_COMPLETE);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_QUEST_COMPLETE);
     Push(L, pPlayer);
@@ -1615,7 +1523,6 @@ bool Eluna::OnQuestReward(Player* pPlayer, Creature* pCreature, Quest const* pQu
     int bind = CreatureEventBindings.GetBind(pCreature->GetEntry(), CREATURE_EVENT_ON_QUEST_REWARD);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_QUEST_REWARD);
     Push(L, pPlayer);
@@ -1630,7 +1537,6 @@ uint32 Eluna::GetDialogStatus(Player* pPlayer, Creature* pCreature)
     int bind = CreatureEventBindings.GetBind(pCreature->GetEntry(), CREATURE_EVENT_ON_DIALOG_STATUS);
     if (!bind)
         return 0;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_DIALOG_STATUS);
     Push(L, pPlayer);
@@ -1644,7 +1550,6 @@ void Eluna::OnSummoned(Creature* pCreature, Unit* pSummoner)
     int bind = CreatureEventBindings.GetBind(pCreature->GetEntry(), CREATURE_EVENT_ON_SUMMONED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_SUMMONED);
     Push(L, pCreature);
@@ -1658,7 +1563,7 @@ struct ElunaCreatureAI : ScriptedAI
 #define me  m_creature
 #endif
 
-    ElunaCreatureAI(Creature* creature) : ScriptedAI(creature)
+    ElunaCreatureAI(Creature* creature): ScriptedAI(creature)
     {
         me->GetMap()->GetEluna()->JustRespawned(me);
     }
@@ -1675,128 +1580,128 @@ struct ElunaCreatureAI : ScriptedAI
         me->GetMap()->GetEluna()->UpdateAI(me, diff);
     }
 
-    //Called for reaction at enter to combat if not in combat yet (enemy can be NULL)
-    //Called at creature aggro either by MoveInLOS or Attack Start
-    void EnterCombat(Unit* target) OVERRIDE
+        //Called for reaction at enter to combat if not in combat yet (enemy can be NULL)
+        //Called at creature aggro either by MoveInLOS or Attack Start
+        void EnterCombat(Unit* target) OVERRIDE
     {
         ScriptedAI::EnterCombat(target);
         me->GetMap()->GetEluna()->EnterCombat(me, target);
     }
 
-    // Called at any Damage from any attacker (before damage apply)
-    void DamageTaken(Unit* attacker, uint32& damage) OVERRIDE
+        // Called at any Damage from any attacker (before damage apply)
+        void DamageTaken(Unit* attacker, uint32& damage) OVERRIDE
     {
         ScriptedAI::DamageTaken(attacker, damage);
         me->GetMap()->GetEluna()->DamageTaken(me, attacker, damage);
     }
 
-    //Called at creature death
-    void JustDied(Unit* killer) OVERRIDE
+        //Called at creature death
+        void JustDied(Unit* killer) OVERRIDE
     {
         ScriptedAI::JustDied(killer);
         me->GetMap()->GetEluna()->JustDied(me, killer);
     }
 
-    //Called at creature killing another unit
-    void KilledUnit(Unit* victim) OVERRIDE
+        //Called at creature killing another unit
+        void KilledUnit(Unit* victim) OVERRIDE
     {
         ScriptedAI::KilledUnit(victim);
         me->GetMap()->GetEluna()->KilledUnit(me, victim);
     }
 
-    // Called when the creature summon successfully other creature
-    void JustSummoned(Creature* summon) OVERRIDE
+        // Called when the creature summon successfully other creature
+        void JustSummoned(Creature* summon) OVERRIDE
     {
         ScriptedAI::JustSummoned(summon);
         me->GetMap()->GetEluna()->JustSummoned(me, summon);
     }
 
-    // Called when a summoned creature is despawned
-    void SummonedCreatureDespawn(Creature* summon) OVERRIDE
+        // Called when a summoned creature is despawned
+        void SummonedCreatureDespawn(Creature* summon) OVERRIDE
     {
         ScriptedAI::SummonedCreatureDespawn(summon);
         me->GetMap()->GetEluna()->SummonedCreatureDespawn(me, summon);
     }
 
-    //Called at waypoint reached or PointMovement end
-    void MovementInform(uint32 type, uint32 id) OVERRIDE
+        //Called at waypoint reached or PointMovement end
+        void MovementInform(uint32 type, uint32 id) OVERRIDE
     {
         ScriptedAI::MovementInform(type, id);
         me->GetMap()->GetEluna()->MovementInform(me, type, id);
     }
 
-    // Called before EnterCombat even before the creature is in combat.
-    void AttackStart(Unit* target) OVERRIDE
+        // Called before EnterCombat even before the creature is in combat.
+        void AttackStart(Unit* target) OVERRIDE
     {
         ScriptedAI::AttackStart(target);
         me->GetMap()->GetEluna()->AttackStart(me, target);
     }
 
-    // Called for reaction at stopping attack at no attackers or targets
-    void EnterEvadeMode() OVERRIDE
+        // Called for reaction at stopping attack at no attackers or targets
+        void EnterEvadeMode() OVERRIDE
     {
         ScriptedAI::EnterEvadeMode();
         me->GetMap()->GetEluna()->EnterEvadeMode(me);
     }
 
-    // Called when the creature is target of hostile action: swing, hostile spell landed, fear/etc)
-    void AttackedBy(Unit* attacker) OVERRIDE
+        // Called when the creature is target of hostile action: swing, hostile spell landed, fear/etc)
+        void AttackedBy(Unit* attacker) OVERRIDE
     {
         ScriptedAI::AttackedBy(attacker);
         me->GetMap()->GetEluna()->AttackedBy(me, attacker);
     }
 
-    // Called when creature is spawned or respawned (for reseting variables)
-    void JustRespawned() OVERRIDE
+        // Called when creature is spawned or respawned (for reseting variables)
+        void JustRespawned() OVERRIDE
     {
         ScriptedAI::JustRespawned();
         me->GetMap()->GetEluna()->JustRespawned(me);
     }
 
-    // Called at reaching home after evade
-    void JustReachedHome() OVERRIDE
+        // Called at reaching home after evade
+        void JustReachedHome() OVERRIDE
     {
         ScriptedAI::JustReachedHome();
         me->GetMap()->GetEluna()->JustReachedHome(me);
     }
 
-    // Called at text emote receive from player
-    void ReceiveEmote(Player* player, uint32 emoteId) OVERRIDE
+        // Called at text emote receive from player
+        void ReceiveEmote(Player* player, uint32 emoteId) OVERRIDE
     {
         ScriptedAI::ReceiveEmote(player, emoteId);
         me->GetMap()->GetEluna()->ReceiveEmote(me, player, emoteId);
     }
 
-    // called when the corpse of this creature gets removed
-    void CorpseRemoved(uint32& respawnDelay) OVERRIDE
+        // called when the corpse of this creature gets removed
+        void CorpseRemoved(uint32& respawnDelay) OVERRIDE
     {
         ScriptedAI::CorpseRemoved(respawnDelay);
         me->GetMap()->GetEluna()->CorpseRemoved(me, respawnDelay);
     }
 
 #ifdef MANGOS
-    // Enables use of MoveInLineOfSight
-    bool IsVisible(Unit* who) const OVERRIDE
+        // Enables use of MoveInLineOfSight
+        bool IsVisible(Unit* who) const OVERRIDE
     {
         return me->IsWithinLOSInMap(who);
     }
 #endif
 
-    void MoveInLineOfSight(Unit* who) OVERRIDE
+        void MoveInLineOfSight(Unit* who) OVERRIDE
     {
         ScriptedAI::MoveInLineOfSight(who);
         me->GetMap()->GetEluna()->MoveInLineOfSight(me, who);
     }
 
-    // Called when hit by a spell
-    void SpellHit(Unit* caster, SpellInfo const* spell) OVERRIDE
+        // Called when hit by a spell
+        void SpellHit(Unit* caster, SpellInfo const* spell) OVERRIDE
     {
         ScriptedAI::SpellHit(caster, spell);
         me->GetMap()->GetEluna()->SpellHit(me, caster, spell);
     }
 
-    // Called when spell hits a target
-    void SpellHitTarget(Unit* target, SpellInfo const* spell) OVERRIDE
+        // Called when spell hits a target
+        void SpellHitTarget(Unit* target, SpellInfo const* spell) OVERRIDE
     {
         ScriptedAI::SpellHitTarget(target, spell);
         me->GetMap()->GetEluna()->SpellHitTarget(me, target, spell);
@@ -1804,28 +1709,28 @@ struct ElunaCreatureAI : ScriptedAI
 
 #ifndef MANGOS
 
-    // Called when the creature is summoned successfully by other creature
-    void IsSummonedBy(Unit* summoner) OVERRIDE
+        // Called when the creature is summoned successfully by other creature
+        void IsSummonedBy(Unit* summoner) OVERRIDE
     {
         ScriptedAI::IsSummonedBy(summoner);
         me->GetMap()->GetEluna()->IsSummonedBy(me, summoner);
     }
 
-    void SummonedCreatureDies(Creature* summon, Unit* killer) OVERRIDE
+        void SummonedCreatureDies(Creature* summon, Unit* killer) OVERRIDE
     {
         ScriptedAI::SummonedCreatureDies(summon, killer);
         me->GetMap()->GetEluna()->SummonedCreatureDies(me, summon, killer);
     }
 
-    // Called when owner takes damage
-    void OwnerAttackedBy(Unit* attacker) OVERRIDE
+        // Called when owner takes damage
+        void OwnerAttackedBy(Unit* attacker) OVERRIDE
     {
         ScriptedAI::OwnerAttackedBy(attacker);
         me->GetMap()->GetEluna()->OwnerAttackedBy(me, attacker);
     }
 
-    // Called when owner attacks something
-    void OwnerAttacked(Unit* target) OVERRIDE
+        // Called when owner attacks something
+        void OwnerAttacked(Unit* target) OVERRIDE
     {
         ScriptedAI::OwnerAttacked(target);
         me->GetMap()->GetEluna()->OwnerAttacked(me, target);
@@ -1849,7 +1754,6 @@ void Eluna::UpdateAI(Creature* me, uint32 diff)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_AIUPDATE);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_AIUPDATE);
     Push(L, me);
@@ -1864,7 +1768,6 @@ void Eluna::EnterCombat(Creature* me, Unit* target)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_ENTER_COMBAT);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_ENTER_COMBAT);
     Push(L, me);
@@ -1878,7 +1781,6 @@ void Eluna::DamageTaken(Creature* me, Unit* attacker, uint32& damage)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_DAMAGE_TAKEN);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_DAMAGE_TAKEN);
     Push(L, me);
@@ -1894,7 +1796,6 @@ void Eluna::JustDied(Creature* me, Unit* killer)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_DIED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_DIED);
     Push(L, me);
@@ -1908,7 +1809,6 @@ void Eluna::KilledUnit(Creature* me, Unit* victim)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_TARGET_DIED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_TARGET_DIED);
     Push(L, me);
@@ -1922,7 +1822,6 @@ void Eluna::JustSummoned(Creature* me, Creature* summon)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_JUST_SUMMONED_CREATURE);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_JUST_SUMMONED_CREATURE);
     Push(L, me);
@@ -1936,7 +1835,6 @@ void Eluna::SummonedCreatureDespawn(Creature* me, Creature* summon)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_SUMMONED_CREATURE_DESPAWN);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_SUMMONED_CREATURE_DESPAWN);
     Push(L, me);
@@ -1950,7 +1848,6 @@ void Eluna::MovementInform(Creature* me, uint32 type, uint32 id)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_REACH_WP);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_REACH_WP);
     Push(L, me);
@@ -1965,7 +1862,6 @@ void Eluna::AttackStart(Creature* me, Unit* target)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_PRE_COMBAT);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_PRE_COMBAT);
     Push(L, me);
@@ -1980,7 +1876,6 @@ void Eluna::EnterEvadeMode(Creature* me)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_LEAVE_COMBAT);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_LEAVE_COMBAT);
     Push(L, me);
@@ -1993,7 +1888,6 @@ void Eluna::AttackedBy(Creature* me, Unit* attacker)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_ATTACKED_AT);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_ATTACKED_AT);
     Push(L, me);
@@ -2008,7 +1902,6 @@ void Eluna::JustRespawned(Creature* me)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_SPAWN);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_SPAWN);
     Push(L, me);
@@ -2021,7 +1914,6 @@ void Eluna::JustReachedHome(Creature* me)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_REACH_HOME);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_REACH_HOME);
     Push(L, me);
@@ -2034,7 +1926,6 @@ void Eluna::ReceiveEmote(Creature* me, Player* player, uint32 emoteId)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_RECEIVE_EMOTE);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_RECEIVE_EMOTE);
     Push(L, me);
@@ -2049,7 +1940,6 @@ void Eluna::CorpseRemoved(Creature* me, uint32& respawnDelay)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_CORPSE_REMOVED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_CORPSE_REMOVED);
     Push(L, me);
@@ -2062,7 +1952,6 @@ void Eluna::MoveInLineOfSight(Creature* me, Unit* who)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_MOVE_IN_LOS);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_MOVE_IN_LOS);
     Push(L, me);
@@ -2076,7 +1965,6 @@ void Eluna::On_Reset(Creature* me) // custom
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_RESET);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_RESET);
     Push(L, me);
@@ -2089,7 +1977,6 @@ void Eluna::SpellHit(Creature* me, Unit* caster, SpellInfo const* spell)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_HIT_BY_SPELL);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_HIT_BY_SPELL);
     Push(L, me);
@@ -2104,7 +1991,6 @@ void Eluna::SpellHitTarget(Creature* me, Unit* target, SpellInfo const* spell)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_SPELL_HIT_TARGET);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_SPELL_HIT_TARGET);
     Push(L, me);
@@ -2126,7 +2012,6 @@ void Eluna::SummonedCreatureDies(Creature* me, Creature* summon, Unit* killer)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_SUMMONED_CREATURE_DIED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_SUMMONED_CREATURE_DIED);
     Push(L, me);
@@ -2141,7 +2026,6 @@ void Eluna::OwnerAttackedBy(Creature* me, Unit* attacker)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_OWNER_ATTACKED_AT);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_OWNER_ATTACKED_AT);
     Push(L, me);
@@ -2155,7 +2039,6 @@ void Eluna::OwnerAttacked(Creature* me, Unit* target)
     int bind = CreatureEventBindings.GetBind(me->GetEntry(), CREATURE_EVENT_ON_OWNER_ATTACKED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, CREATURE_EVENT_ON_OWNER_ATTACKED);
     Push(L, me);
@@ -2170,7 +2053,6 @@ bool Eluna::OnDummyEffect(Unit* pCaster, uint32 spellId, SpellEffIndex effIndex,
     int bind = GameObjectEventBindings.GetBind(pTarget->GetEntry(), GAMEOBJECT_EVENT_ON_DUMMY_EFFECT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_DUMMY_EFFECT);
     Push(L, pCaster);
@@ -2186,7 +2068,6 @@ bool Eluna::OnGossipHello(Player* pPlayer, GameObject* pGameObject)
     int bind = GameObjectGossipBindings.GetBind(pGameObject->GetEntry(), GOSSIP_EVENT_ON_HELLO);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     pPlayer->PlayerTalkClass->ClearMenus();
     BeginCall(bind);
     Push(L, GOSSIP_EVENT_ON_HELLO);
@@ -2201,7 +2082,6 @@ bool Eluna::OnGossipSelect(Player* pPlayer, GameObject* pGameObject, uint32 send
     int bind = GameObjectGossipBindings.GetBind(pGameObject->GetEntry(), GOSSIP_EVENT_ON_SELECT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     pPlayer->PlayerTalkClass->ClearMenus();
     BeginCall(bind);
     Push(L, GOSSIP_EVENT_ON_SELECT);
@@ -2218,7 +2098,6 @@ bool Eluna::OnGossipSelectCode(Player* pPlayer, GameObject* pGameObject, uint32 
     int bind = GameObjectGossipBindings.GetBind(pGameObject->GetEntry(), GOSSIP_EVENT_ON_SELECT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     pPlayer->PlayerTalkClass->ClearMenus();
     BeginCall(bind);
     Push(L, GOSSIP_EVENT_ON_SELECT);
@@ -2236,7 +2115,6 @@ bool Eluna::OnQuestAccept(Player* pPlayer, GameObject* pGameObject, Quest const*
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_QUEST_ACCEPT);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_QUEST_ACCEPT);
     Push(L, pPlayer);
@@ -2251,7 +2129,6 @@ bool Eluna::OnQuestComplete(Player* pPlayer, GameObject* pGameObject, Quest cons
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_QUEST_COMPLETE);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_QUEST_COMPLETE);
     Push(L, pPlayer);
@@ -2266,7 +2143,6 @@ void Eluna::UpdateAI(GameObject* pGameObject, uint32 diff)
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_AIUPDATE);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_AIUPDATE);
     Push(L, pGameObject);
@@ -2279,7 +2155,6 @@ bool Eluna::OnQuestReward(Player* pPlayer, GameObject* pGameObject, Quest const*
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_QUEST_REWARD);
     if (!bind)
         return false;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_QUEST_REWARD);
     Push(L, pPlayer);
@@ -2294,7 +2169,6 @@ uint32 Eluna::GetDialogStatus(Player* pPlayer, GameObject* pGameObject)
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_DIALOG_STATUS);
     if (!bind)
         return 0;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_DIALOG_STATUS);
     Push(L, pPlayer);
@@ -2310,7 +2184,6 @@ void Eluna::OnDestroyed(GameObject* pGameObject, Player* pPlayer)
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_DESTROYED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_DESTROYED);
     Push(L, pGameObject);
@@ -2323,7 +2196,6 @@ void Eluna::OnDamaged(GameObject* pGameObject, Player* pPlayer)
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_DAMAGED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_DAMAGED);
     Push(L, pGameObject);
@@ -2338,7 +2210,6 @@ void Eluna::OnLootStateChanged(GameObject* pGameObject, uint32 state)
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_LOOT_STATE_CHANGE);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_LOOT_STATE_CHANGE);
     Push(L, pGameObject);
@@ -2351,7 +2222,6 @@ void Eluna::OnGameObjectStateChanged(GameObject* pGameObject, uint32 state)
     int bind = GameObjectEventBindings.GetBind(pGameObject->GetEntry(), GAMEOBJECT_EVENT_ON_GO_STATE_CHANGED);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_GO_STATE_CHANGED);
     Push(L, pGameObject);
@@ -2371,7 +2241,6 @@ void Eluna::OnSpawn(GameObject* gameobject)
     int bind = GameObjectEventBindings.GetBind(gameobject->GetEntry(), GAMEOBJECT_EVENT_ON_SPAWN);
     if (!bind)
         return;
-    ELUNA_GUARD();
     BeginCall(bind);
     Push(L, GAMEOBJECT_EVENT_ON_SPAWN);
     Push(L, gameobject);

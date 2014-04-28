@@ -4,16 +4,53 @@
 * Please see the included DOCS/LICENSE.md for more information
 */
 
+#include "LuaEngine.h"
+#include "Includes.h"
 #include <ace/Dirent.h>
 #include <ace/OS_NS_sys_stat.h>
-#include "LuaEngine.h"
 
 extern void RegisterFunctions(lua_State* L);
 extern void AddElunaScripts();
 
-template <typename K, typename V> UNORDERED_MAP< K, V > RWHashMap<K, V>::hashmaop;
+void StateMsg::Data::Push(lua_State* L) const
+{
+    switch (_type)
+    {
+    default:
+    case TYPE_NIL:
+        Eluna::Push(L);
+        break;
+    case TYPE_BOOL:
+        Eluna::Push(L, _bool);
+        break;
+    case TYPE_STRING:
+        Eluna::Push(L, _str);
+        break;
+    case TYPE_NUMBER:
+        Eluna::Push(L, _num);
+        break;
+    }
+};
+
+Eluna* StateMsg::GetTarget() const
+{
+    if (t_mapid == MAPID_INVALID)
+        return &Eluna::GEluna;
+    if (Map* map = sMapMgr->FindMap(t_mapid, t_instanceid))
+        return map->GetEluna();
+    return NULL;
+}
+
+void StateMsg::Push(lua_State* L) const
+{
+    for (MsgData::const_iterator it = msgs.begin(); it != msgs.end(); ++it)
+        it->Push(L);
+}
+
+template <typename K, typename V> UNORDERED_MAP< K, V > RWHashMap<K, V>::hashmap;
 template <typename K, typename V> typename RWHashMap< K, V >::LockType RWHashMap<K, V>::lock;
 template class RWHashMap<lua_State*, Eluna*>;
+ACE_Based::LockedQueue<StateMsg*, ACE_Thread_Mutex> Eluna::StateMsgQue;
 Eluna Eluna::GEluna(NULL);
 
 Eluna* Eluna::GetEluna(lua_State* L)
@@ -51,7 +88,7 @@ playerGossipBindings(*this)
     ELUNA_LOG_DEBUG("[Eluna]: Creating new lua state");
     ElunaMap.Insert(L, this);
     luaL_openlibs(L);
-    RegisterFunctions(L);
+    RegisterFunctions();
 
     ScriptPaths scripts;
     Eluna::GetScripts("lua_scripts", scripts);
@@ -116,39 +153,39 @@ Eluna::~Eluna()
 }
 
 // Start or restart eluna. Returns true if started
-bool StartEluna()
-{
-#ifndef ELUNA
-#ifndef MANGOS
-    {
-        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please enable in cmake)");
-        return false;
-    }
-#endif
-#endif
-
-    //ELUNA_GUARD();
-    //bool restart = false;
-    //if (eluna.L)
-    //{
-    //    restart = true;
-    //    Eluna::OnEngineRestart();
-
-    //}
-    //else
-    //    AddElunaScripts();
-
-#ifdef MANGOS
-    // Check config file for eluna is enabled or disabled
-    if (!sWorld->getConfig(CONFIG_BOOL_ELUNA_ENABLED))
-    {
-        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please set config in 'mangosd.conf')");
-        return false;
-    }
-#endif
-
-    return true;
-}
+//bool StartEluna_OBSOLETE()
+//{
+//#ifndef ELUNA
+//#ifndef MANGOS
+//    {
+//        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please enable in cmake)");
+//        return false;
+//    }
+//#endif
+//#endif
+//
+//    //ELUNA_GUARD();
+//    //bool restart = false;
+//    //if (eluna.L)
+//    //{
+//    //    restart = true;
+//    //    Eluna::OnEngineRestart();
+//
+//    //}
+//    //else
+//    //    AddElunaScripts();
+//
+//#ifdef MANGOS
+//    // Check config file for eluna is enabled or disabled
+//    if (!sWorld->getConfig(CONFIG_BOOL_ELUNA_ENABLED))
+//    {
+//        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please set config in 'mangosd.conf')");
+//        return false;
+//    }
+//#endif
+//
+//    return true;
+//}
 
 // Finds lua script files from given path (including subdirectories) and pushes them to scripts
 void Eluna::GetScripts(std::string path, ScriptPaths& scripts)
@@ -872,7 +909,6 @@ LuaEvent::~LuaEvent()
 
 bool LuaEvent::Execute(uint64 time, uint32 diff)
 {
-    ELUNA_GUARD();
     bool remove = (calls == 1);
     if (!remove)
         events->AddEvent(this, events->CalculateTime(delay)); // Reschedule before calling incase RemoveEvents used
@@ -979,59 +1015,6 @@ void EventMgr::RemoveEvent(int eventId)
     for (EventMap::const_iterator it = LuaEvents.begin(); it != LuaEvents.end();) // loop processors
         if (RemoveEvent((it++)->first, eventId))
             break; // succesfully remove the event, stop loop.
-}
-
-// Lua taxi helper functions
-uint32 LuaTaxiMgr::nodeId = 500;
-void LuaTaxiMgr::StartTaxi(Player* player, uint32 pathid)
-{
-    if (pathid >= sTaxiPathNodesByPath.size())
-        return;
-
-    TaxiPathNodeList const& path = sTaxiPathNodesByPath[pathid];
-    if (path.size() < 2)
-        return;
-
-    std::vector<uint32> nodes;
-    nodes.resize(2);
-    nodes[0] = path[0].index;
-    nodes[1] = path[path.size() - 1].index;
-
-    player->ActivateTaxiPathTo(nodes);
-}
-
-uint32 LuaTaxiMgr::AddPath(std::list<TaxiPathNodeEntry> nodes, uint32 mountA, uint32 mountH, uint32 price, uint32 pathId)
-{
-    if (nodes.size() < 2)
-        return 0;
-    if (!pathId)
-        pathId = sTaxiPathNodesByPath.size();
-    if (sTaxiPathNodesByPath.size() <= pathId)
-        sTaxiPathNodesByPath.resize(pathId + 1);
-    sTaxiPathNodesByPath[pathId].clear();
-    sTaxiPathNodesByPath[pathId].resize(nodes.size());
-    uint32 startNode = nodeId;
-    uint32 index = 0;
-    for (std::list<TaxiPathNodeEntry>::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-    {
-        TaxiPathNodeEntry entry = *it;
-        entry.path = pathId;
-        TaxiNodesEntry* nodeEntry = new TaxiNodesEntry();
-        nodeEntry->ID = index;
-        nodeEntry->map_id = entry.mapid;
-        nodeEntry->MountCreatureID[0] = mountH;
-        nodeEntry->MountCreatureID[1] = mountA;
-        nodeEntry->x = entry.x;
-        nodeEntry->y = entry.y;
-        nodeEntry->z = entry.z;
-        sTaxiNodesStore.SetEntry(nodeId, nodeEntry);
-        entry.index = nodeId++;
-        sTaxiPathNodesByPath[pathId].set(index++, TaxiPathNodePtr(new TaxiPathNodeEntry(entry)));
-    }
-    if (startNode >= nodeId)
-        return 0;
-    sTaxiPathSetBySource[startNode][nodeId - 1] = TaxiPathBySourceAndDestination(pathId, price);
-    return pathId;
 }
 
 bool Eluna::WorldObjectInRangeCheck::operator()(WorldObject* u)

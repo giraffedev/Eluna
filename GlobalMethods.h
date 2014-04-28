@@ -7,8 +7,6 @@
 #ifndef GLOBALMETHODS_H
 #define GLOBALMETHODS_H
 
-extern bool StartEluna();
-
 namespace LuaGlobalFunctions
 {
     /* GETTERS */
@@ -78,38 +76,6 @@ namespace LuaGlobalFunctions
         return 1;
     }
 
-    int GetPlayersInWorld(lua_State* L)
-    {
-        uint32 team = Eluna::CHECKVAL<uint32>(L, 1, TEAM_NEUTRAL);
-        bool onlyGM = Eluna::CHECKVAL<bool>(L, 2, false);
-
-        lua_newtable(L);
-        int tbl = lua_gettop(L);
-        uint32 i = 0;
-
-        SessionMap const& sessions = sWorld->GetAllSessions();
-        for (SessionMap::const_iterator it = sessions.begin(); it != sessions.end(); ++it)
-        {
-            if (Player* player = it->second->GetPlayer())
-            {
-#ifdef MANGOS
-                if (player->GetSession() && ((team >= TEAM_NEUTRAL || player->GetTeamId() == team) && (!onlyGM || player->isGameMaster())))
-#else
-                if (player->GetSession() && ((team >= TEAM_NEUTRAL || player->GetTeamId() == team) && (!onlyGM || player->IsGameMaster())))
-#endif
-                {
-                    ++i;
-                    Eluna::Push(L, i);
-                    Eluna::Push(L, player);
-                    lua_settable(L, tbl);
-                }
-            }
-        }
-
-        lua_settop(L, tbl); // push table to top of stack
-        return 1;
-    }
-
     int GetPlayersInMap(lua_State* L)
     {
         uint32 mapID = Eluna::CHECKVAL<uint32>(L, 1);
@@ -154,12 +120,11 @@ namespace LuaGlobalFunctions
         return 1;
     }
 
-    int GetMapById(lua_State* L)
+    int GetMap(lua_State* L)
     {
-        uint32 mapid = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 instance = Eluna::CHECKVAL<uint32>(L, 2);
-
-        Eluna::Push(L, sMapMgr->FindMap(mapid, instance));
+        Eluna* E = Eluna::GetEluna(L);
+        if (E)
+            Eluna::Push(L, E->GMap);
         return 1;
     }
 
@@ -405,12 +370,6 @@ namespace LuaGlobalFunctions
         if (functionRef > 0)
             Eluna::GetEluna(L)->Register(REGTYPE_GAMEOBJECT, entry, ev, functionRef);
         return 0;
-    }
-
-    int ReloadEluna(lua_State* L)
-    {
-        Eluna::Push(L, StartEluna());
-        return 1;
     }
 
     int SendWorldMessage(lua_State* L)
@@ -1064,6 +1023,42 @@ namespace LuaGlobalFunctions
         return 1;
     }
 
+    // Helper
+    uint32 AddPath(std::list<TaxiPathNodeEntry> nodes, uint32 mountA, uint32 mountH, uint32 price, uint32 pathId)
+    {
+        if (nodes.size() < 2)
+            return 0;
+        if (!pathId)
+            pathId = sTaxiPathNodesByPath.size();
+        if (sTaxiPathNodesByPath.size() <= pathId)
+            sTaxiPathNodesByPath.resize(pathId + 1);
+        sTaxiPathNodesByPath[pathId].clear();
+        sTaxiPathNodesByPath[pathId].resize(nodes.size());
+        static uint32 nodeId = 500;
+        uint32 startNode = nodeId;
+        uint32 index = 0;
+        for (std::list<TaxiPathNodeEntry>::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
+        {
+            TaxiPathNodeEntry entry = *it;
+            entry.path = pathId;
+            TaxiNodesEntry* nodeEntry = new TaxiNodesEntry();
+            nodeEntry->ID = index;
+            nodeEntry->map_id = entry.mapid;
+            nodeEntry->MountCreatureID[0] = mountH;
+            nodeEntry->MountCreatureID[1] = mountA;
+            nodeEntry->x = entry.x;
+            nodeEntry->y = entry.y;
+            nodeEntry->z = entry.z;
+            sTaxiNodesStore.SetEntry(nodeId, nodeEntry);
+            entry.index = nodeId++;
+            sTaxiPathNodesByPath[pathId].set(index++, TaxiPathNodePtr(new TaxiPathNodeEntry(entry)));
+        }
+        if (startNode >= nodeId)
+            return 0;
+        sTaxiPathSetBySource[startNode][nodeId - 1] = TaxiPathBySourceAndDestination(pathId, price);
+        return pathId;
+    }
+
     // AddTaxiPath(pathTable, mountA, mountH[, price, pathId])
     int AddTaxiPath(lua_State* L)
     {
@@ -1122,7 +1117,7 @@ namespace LuaGlobalFunctions
             lua_pop(L, 1);
         }
 
-        Eluna::Push(L, LuaTaxiMgr::AddPath(nodes, mountA, mountH, price, pathId));
+        Eluna::Push(L, AddPath(nodes, mountA, mountH, price, pathId));
         return 1;
     }
 
@@ -1199,6 +1194,87 @@ namespace LuaGlobalFunctions
 #else
         WeatherMgr::SendFineWeatherUpdateToPlayer(player);
 #endif
+        return 0;
+    }
+
+    int DoForPlayersInWorld(lua_State* L)
+    {
+        luaL_checktype(L, 1, LUA_TFUNCTION);
+        uint32 team = Eluna::CHECKVAL<uint32>(L, 2, TEAM_NEUTRAL);
+        bool onlyGM = Eluna::CHECKVAL<bool>(L, 3, false);
+
+        Eluna* E = Eluna::GetEluna(L);
+        if (!E)
+            return 0;
+
+        TRINITY_READ_GUARD(HashMapHolder<Player>::LockType, *HashMapHolder<Player>::GetLock());
+        HashMapHolder<Player>::MapType const& m = sObjectAccessor->GetPlayers();
+        for (HashMapHolder<Player>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
+        {
+            Player* player = itr->second;
+
+            if (team != TEAM_NEUTRAL && player->GetTeamId() == team)
+                continue;
+#ifdef MANGOS
+            if (onlyGM && player->isGameMaster())
+                continue;
+#else
+            if (onlyGM && player->IsGameMaster())
+                continue;
+#endif
+            lua_pushvalue(L, 1); // function
+            Eluna::Push(L, player);
+            E->ExecuteCall(1, 0);
+        }
+        return 0;
+    }
+
+    int map_SendStateMsg(lua_State* L)
+    {
+        int i = 0;
+        uint32 target_map = Eluna::CHECKVAL<uint32>(L, ++i, MAPID_INVALID);
+        uint32 target_instanceid = Eluna::CHECKVAL<uint32>(L, ++i, 0);
+        StateMsg* msg = new StateMsg(target_map, target_instanceid);
+        while (!lua_isnone(L, ++i))
+        {
+            if (lua_isnil(L, i))
+                msg->AddValue();
+            else if (lua_isboolean(L, i))
+                msg->AddValue(Eluna::CHECKVAL<bool>(L, i));
+            else if (lua_isstring(L, i))
+                msg->AddValue(Eluna::CHECKVAL<std::string>(L, i));
+            else if (lua_isnumber(L, i))
+                msg->AddValue(Eluna::CHECKVAL<double>(L, i));
+            else
+                luaL_argerror(L, i, "Unsupported argument type");
+        }
+        Eluna::AddStateMsg(msg);
+        return 0;
+    }
+
+    int world_SendStateMsg(lua_State* L)
+    {
+        int i = 0;
+        uint32 target_map = Eluna::CHECKVAL<uint32>(L, ++i, MAPID_INVALID);
+        uint32 target_instanceid = Eluna::CHECKVAL<uint32>(L, ++i, 0);
+        StateMsg* msg = new StateMsg(target_map, target_instanceid);
+        while (!lua_isnone(L, ++i))
+        {
+            if (lua_isnil(L, i))
+                msg->AddValue();
+            else if (lua_isboolean(L, i))
+                msg->AddValue(Eluna::CHECKVAL<bool>(L, i));
+            else if (lua_isstring(L, i))
+                msg->AddValue(Eluna::CHECKVAL<std::string>(L, i));
+            else if (lua_isnumber(L, i))
+                msg->AddValue(Eluna::CHECKVAL<double>(L, i));
+            else
+                luaL_argerror(L, i, "Unsupported argument type");
+        }
+        // Send directly as this thread safe for world
+        if (Eluna* E = msg->GetTarget())
+            E->OnStateMessage(msg);
+        delete msg;
         return 0;
     }
 }

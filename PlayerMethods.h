@@ -2184,11 +2184,29 @@ namespace LuaPlayer
         return 0;
     }
 
+    // Helper
+    void StartTaxi(Player* player, uint32 pathid)
+    {
+        if (pathid >= sTaxiPathNodesByPath.size())
+            return;
+
+        TaxiPathNodeList const& path = sTaxiPathNodesByPath[pathid];
+        if (path.size() < 2)
+            return;
+
+        std::vector<uint32> nodes;
+        nodes.resize(2);
+        nodes[0] = path[0].index;
+        nodes[1] = path[path.size() - 1].index;
+
+        player->ActivateTaxiPathTo(nodes);
+    }
+
     int StartTaxi(lua_State* L, Player* player)
     {
         uint32 pathId = Eluna::CHECKVAL<uint32>(L, 2);
 
-        LuaTaxiMgr::StartTaxi(player, pathId);
+        StartTaxi(player, pathId);
         return 0;
     }
 

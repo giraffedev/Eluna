@@ -16,51 +16,65 @@ extern "C"
 
 #include "HookMgr.h"
 
-// Required
-#include "AccountMgr.h"
-#include "AuctionHouseMgr.h"
-#include "Cell.h"
-#include "CellImpl.h"
-#include "Chat.h"
-#include "Channel.h"
-#include "DBCStores.h"
-#include "GossipDef.h"
-#include "GridNotifiers.h"
-#include "GridNotifiersImpl.h"
+// Base
+#include "Common.h"
+#include "SharedDefines.h"
+
+// classes
+#include "EventProcessor.h"
+#include "ThreatManager.h"
+
+// enums
 #include "Group.h"
-#include "Guild.h"
-#include "GuildMgr.h"
-#include "Language.h"
-#include "Mail.h"
-#include "MapManager.h"
-#include "ObjectAccessor.h"
-#include "ObjectMgr.h"
-#include "Opcodes.h"
-#include "Player.h"
-#include "Pet.h"
-#include "ReputationMgr.h"
-#include "revision.h"
-#include "ScriptMgr.h"
-#include "Spell.h"
-#include "SpellAuras.h"
-#include "SpellMgr.h"
-#include "TemporarySummon.h"
-#include "World.h"
-#include "WorldPacket.h"
-#include "WorldSession.h"
+#include "Item.h"
 #ifdef MANGOS
-#include "ReactorAI.h"
-#include "revision_nr.h"
+#include "Player.h"
+#endif
+#include "Weather.h"
+#include "World.h"
+
+#ifdef MANGOS
+typedef SpellEffectIndex SpellEffIndex;
+typedef SpellEntry SpellInfo;
+typedef ItemPrototype ItemTemplate;
+#define GetTemplate             GetProto
+#ifdef CLASSIC
+typedef int Difficulty;
+#endif
+#endif
+
+struct AreaTriggerEntry;
+#ifdef MANGOS
+class ReactorAI;
+typedef ReactorAI ScriptedAI;
 #else
-#include "ScriptedCreature.h"
-#include "SpellInfo.h"
-#include "WeatherMgr.h"
+struct ScriptedAI;
 #endif
-#if (!defined(TBC) && !defined(CLASSIC))
-#include "Vehicle.h"
-#endif
+class AuctionHouseObject;
+class Channel;
+class Creature;
+class CreatureAI;
+class GameObject;
+class Guild;
+class Group;
+class Item;
+class Player;
+class Quest;
+class Spell;
+class SpellCastTargets;
+class Transport;
+class Unit;
+class Weather;
+class WorldPacket;
 #ifndef CLASSIC
-#include "ArenaTeam.h"
+#ifndef TBC
+#ifdef TRINITY
+class Vehicle;
+#else
+class VehicleInfo;
+typedef VehicleInfo Vehicle;
+#endif
+#endif
 #endif
 
 typedef std::set<std::string> ScriptPaths;
@@ -132,14 +146,72 @@ typedef ThreatContainer::StorageType ThreatList;
 #endif
 #endif
 
-class Eluna;
+enum ElunaEnvironments
+{
+    ENV_NONE,
+    ENV_MAP,
+    ENV_WORLD,
+    ENV_GLOBAL,
+    ENV_MAX
+};
+
+struct ElunaFunctions
+{
+    ElunaEnvironments env;
+    const char* name;
+    int(*mfunc)(lua_State*);
+};
 
 template<typename T>
-struct ElunaRegister
+struct ElunaMethods
 {
+    ElunaEnvironments env;
     const char* name;
     int(*mfunc)(lua_State*, T*);
 };
+
+template <typename K, typename V>
+class RWHashMap
+{
+public:
+
+    typedef UNORDERED_MAP<K, V> MapType;
+    typedef ACE_RW_Thread_Mutex LockType;
+
+    static void Insert(K key, V value)
+    {
+        ACE_Write_Guard< LockType > GUARD(lock); \
+            if (GUARD.locked() == 0) ASSERT(false);
+        hashmap[key] = value;
+    }
+
+    static void Remove(K key)
+    {
+        ACE_Write_Guard< LockType > GUARD(lock); \
+            if (GUARD.locked() == 0) ASSERT(false);
+        hashmap.erase(key);
+    }
+
+    static V Find(K key)
+    {
+        ACE_Read_Guard< LockType > GUARD(lock); \
+            if (GUARD.locked() == 0) ASSERT(false);
+        typename MapType::iterator itr = hashmap.find(key);
+        return (itr != hashmap.end()) ? itr->second : NULL;
+    }
+
+    static MapType& GetContainer() { return hashmap; }
+
+    static LockType* GetLock() { return &lock; }
+
+private:
+    RWHashMap() {}
+
+    static LockType lock;
+    static MapType hashmap;
+};
+
+class Eluna;
 
 template<typename T>
 class ElunaTemplate
@@ -160,7 +232,7 @@ public:
             return 0;
         T* obj = check(L, 1);
         delete obj; // Deleting NULL should be safe
-        return 1;
+        return 0;
     }
 
     // name will be used as type name
@@ -203,21 +275,27 @@ public:
     }
 
     template<typename C>
-    static void SetMethods(lua_State* L, ElunaRegister<C>* methodTable)
+    static void SetMethods(Eluna* E, ElunaMethods<C>* methodTable)
     {
+        if (!lua_istable(E->L, 1))
+            return;
+        lua_pushstring(E->L, "GetObjectType");
+        lua_pushcclosure(E->L, type, 0);
+        lua_settable(E->L, 1);
         if (!methodTable)
             return;
-        if (!lua_istable(L, 1))
-            return;
-        lua_pushstring(L, "GetObjectType");
-        lua_pushcclosure(L, type, 0);
-        lua_settable(L, 1);
         for (; methodTable->name; ++methodTable)
         {
-            lua_pushstring(L, methodTable->name);
-            lua_pushlightuserdata(L, (void*)methodTable);
-            lua_pushcclosure(L, thunk, 1);
-            lua_settable(L, 1);
+            if (methodTable->env == ENV_MAP && !E->GMap)
+                continue;
+            else if (methodTable->env == ENV_WORLD && E->GMap)
+                continue;
+            else
+                ASSERT(methodTable->env == ENV_GLOBAL);
+            lua_pushstring(E->L, methodTable->name);
+            lua_pushlightuserdata(E->L, (void*)methodTable);
+            lua_pushcclosure(E->L, thunk, 1);
+            lua_settable(E->L, 1);
         }
     }
 
@@ -249,7 +327,7 @@ public:
         {
             if (error)
             {
-                std::string errmsg(ElunaTemplate<T>::tname);
+                std::string errmsg(tname);
                 errmsg += " expected";
                 luaL_argerror(L, narg, errmsg.c_str());
             }
@@ -261,7 +339,7 @@ public:
     static int thunk(lua_State* L)
     {
         T* obj = check(L, 1); // get self
-        ElunaRegister<T>* l = static_cast<ElunaRegister<T>*>(lua_touserdata(L, lua_upvalueindex(1)));
+        ElunaMethods<T>* l = static_cast<ElunaMethods<T>*>(lua_touserdata(L, lua_upvalueindex(1)));
         if (!obj)
             return 0;
         int args = lua_gettop(L);
@@ -270,7 +348,9 @@ public:
         if (args <= 0 || args > expected)
         {
             if (args < 0 || args > expected) // Assert instead?
+            {
                 ELUNA_LOG_ERROR("[Eluna]: %s returned unexpected amount of arguments %i out of %i. Report to devs", l->name, args, expected);
+            }
             return expected;
         }
         for (; args < expected; ++args)
@@ -287,100 +367,12 @@ public:
         return 1;
     }
 };
-
-struct LuaEvent : public BasicEvent
-{
-    LuaEvent(Eluna* _E, int _funcRef, uint32 _delay, uint32 _calls, EventProcessor* _events, WorldObject* _obj = NULL);
-
-    ~LuaEvent();
-
-    // Should never execute on dead events
-    bool Execute(uint64 time, uint32 diff);
-
-    EventProcessor* events; // Pointer to events (holds the timed event)
-    int funcRef;    // Lua function reference ID, also used as event ID
-    uint32 delay;   // Delay between event calls
-    uint32 calls;   // Amount of calls to make, 0 for infinite
-    WorldObject* obj;   // Object to push
-    Eluna* E;       // State containing lua function to run (using Eluna to avoid locking)
-};
-
-template <typename K, typename V>
-class RWHashMap
-{
-public:
-
-    typedef UNORDERED_MAP<K, V> MapType;
-    typedef ACE_RW_Thread_Mutex LockType;
-
-    static void Insert(K key, V value)
-    {
-        ACE_Write_Guard< LockType > GUARD(lock); \
-            if (GUARD.locked() == 0) ASSERT(false);
-        hashmaop[key] = value;
-    }
-
-    static void Remove(K key)
-    {
-        ACE_Write_Guard< LockType > GUARD(lock); \
-            if (GUARD.locked() == 0) ASSERT(false);
-        hashmaop.erase(key);
-    }
-
-    static V Find(K key)
-    {
-        ACE_Read_Guard< LockType > GUARD(lock); \
-            if (GUARD.locked() == 0) ASSERT(false);
-        typename MapType::iterator itr = hashmaop.find(key);
-        return (itr != hashmaop.end()) ? itr->second : NULL;
-    }
-
-    static MapType& GetContainer() { return hashmaop; }
-
-    static LockType* GetLock() { return &lock; }
-
-private:
-    RWHashMap() {}
-
-    static LockType lock;
-    static MapType hashmaop;
-};
-
-struct EventMgr
-{
-    typedef std::set<LuaEvent*> EventSet;
-    typedef std::map<EventProcessor*, EventSet> EventMap;
-
-    EventMap LuaEvents; // LuaEvents[processor] = {LuaEvent, LuaEvent...}
-    EventProcessor GlobalEvents;
-
-    ~EventMgr();
-
-    // Should be run on world tick
-    void Update(uint32 diff);
-
-    // Aborts all lua events
-    void KillAllEvents(EventProcessor* events);
-
-    // Remove all timed events
-    void RemoveEvents();
-
-    // Remove timed events from processor
-    void RemoveEvents(EventProcessor* events);
-
-    // Adds a new event to the processor and returns the eventID or 0 (Never negative)
-    int AddEvent(Eluna* E, int funcRef, uint32 delay, uint32 calls, EventProcessor* events, WorldObject* obj = NULL);
-
-    // Finds the event that has the ID from events
-    LuaEvent* GetEvent(EventProcessor* events, int eventId);
-
-    // Remove the event with the eventId from processor
-    // Returns true if event is removed
-    bool RemoveEvent(EventProcessor* events, int eventId); // eventId = funcRef
-
-    // Removes the eventId from all events
-    void RemoveEvent(int eventId);
-};
+template<typename T> const char* ElunaTemplate<T>::tname = NULL;
+template<typename T> bool ElunaTemplate<T>::manageMemory = false;
+#if (!defined(TBC) && !defined(CLASSIC))
+// fix compile error about accessing vehicle destructor
+template<> int ElunaTemplate<Vehicle>::gcT(lua_State* L) { return 0; }
+#endif
 
 struct EventBind
 {
@@ -434,24 +426,153 @@ struct EntryBind
     ElunaEntryMap Bindings; // Binding store Bindings[entryId][eventId] = funcRef;
 };
 
+struct LuaEvent : public BasicEvent
+{
+    LuaEvent(Eluna* _E, int _funcRef, uint32 _delay, uint32 _calls, EventProcessor* _events, WorldObject* _obj = NULL);
+
+    ~LuaEvent();
+
+    // Should never execute on dead events
+    bool Execute(uint64 time, uint32 diff);
+
+    EventProcessor* events; // Pointer to events (holds the timed event)
+    int funcRef;    // Lua function reference ID, also used as event ID
+    uint32 delay;   // Delay between event calls
+    uint32 calls;   // Amount of calls to make, 0 for infinite
+    WorldObject* obj;   // Object to push
+    Eluna* E;       // State containing lua function to run (using Eluna to avoid locking)
+};
+
+struct EventMgr
+{
+    typedef std::set<LuaEvent*> EventSet;
+    typedef std::map<EventProcessor*, EventSet> EventMap;
+
+    EventMap LuaEvents; // LuaEvents[processor] = {LuaEvent, LuaEvent...}
+    EventProcessor GlobalEvents;
+
+    ~EventMgr();
+
+    // Should be run on world tick
+    void Update(uint32 diff);
+
+    // Aborts all lua events
+    void KillAllEvents(EventProcessor* events);
+
+    // Remove all timed events
+    void RemoveEvents();
+
+    // Remove timed events from processor
+    void RemoveEvents(EventProcessor* events);
+
+    // Adds a new event to the processor and returns the eventID or 0 (Never negative)
+    int AddEvent(Eluna* E, int funcRef, uint32 delay, uint32 calls, EventProcessor* events, WorldObject* obj = NULL);
+
+    // Finds the event that has the ID from events
+    LuaEvent* GetEvent(EventProcessor* events, int eventId);
+
+    // Remove the event with the eventId from processor
+    // Returns true if event is removed
+    bool RemoveEvent(EventProcessor* events, int eventId); // eventId = funcRef
+
+    // Removes the eventId from all events
+    void RemoveEvent(int eventId);
+};
+
+class StateMsg
+{
+public:
+
+    enum StateMsgType
+    {
+        TYPE_NIL,
+        TYPE_BOOL,
+        TYPE_NUMBER,
+        TYPE_STRING,
+        TYPE_MAX
+    };
+
+    class Data
+    {
+    public:
+        Data(): _type(TYPE_NIL) {}
+        Data(bool val): _type(TYPE_BOOL), _bool(val) {}
+        Data(double val): _type(TYPE_NUMBER), _num(val) {}
+        Data(std::string val): _type(TYPE_STRING), _str(val) {}
+
+        StateMsgType GetType()
+        {
+            return _type;
+        }
+
+        void Push(lua_State* L) const;
+
+    private:
+        StateMsgType _type;
+        bool _bool;
+        double _num;
+        std::string _str;
+    };
+
+    typedef std::vector<Data> MsgData;
+
+    StateMsg(uint32 targetmapid, uint32 targetinstanceid):
+        t_mapid(targetmapid), t_instanceid(targetinstanceid)
+    {
+    }
+    void AddValue()
+    {
+        msgs.push_back(Data());
+    }
+    void AddValue(bool val)
+    {
+        msgs.push_back(Data(val));
+    }
+    void AddValue(double val)
+    {
+        msgs.push_back(Data(val));
+    }
+    void AddValue(std::string val)
+    {
+        msgs.push_back(Data(val));
+    }
+    // Thread unsafe
+    Eluna* GetTarget() const;
+    // pushes channel, value1, value2 ...
+    void Push(lua_State* L) const;
+
+private:
+    StateMsg(): t_mapid(MAPID_INVALID), t_instanceid(0) {}
+
+    uint32 t_mapid;         // target mapid (MAPID_INVALID for global)
+    uint32 t_instanceid;    // target instanceid (0 for non instance)
+    MsgData msgs;
+};
+
 class Eluna
 {
+    friend class Map;
+
 private:
+    Eluna(const Eluna&);
+    Eluna& operator=(const Eluna&);
+
     typedef RWHashMap<lua_State*, Eluna*> ElunaMapData;
     static ElunaMapData ElunaMap;
 
-public:
-
-    static Eluna GEluna; // only use for threadunsafe hooks (world update)
-    static Eluna* GetEluna(lua_State* L); // thread safe
-    //static Eluna* GetEluna(Map* map);
-
-    Map* GMap; // NULL for global state
-    lua_State* L;
-    EventMgr m_EventMgr;
+    static ACE_Based::LockedQueue<StateMsg*, ACE_Thread_Mutex> StateMsgQue;
 
     Eluna(Map* _map);
     ~Eluna();
+
+public:
+    Map* GMap; // NULL for global state
+    EventMgr m_EventMgr;
+    lua_State* L; // Always valid
+
+    static Eluna GEluna; // NOTE! only use for threadunsafe hooks (world update)
+    static Eluna* GetEluna(lua_State* L); // Using lock for thread safety, use seldom
+    //static Eluna* GetEluna(Map* map);
 
     // Use templates for EventBind
     EventBind PacketEventBindings;
@@ -469,14 +590,22 @@ public:
     EntryBind ItemGossipBindings;
     EntryBind playerGossipBindings;
 
-    static void report(lua_State*);
+    static void report(lua_State* L);
+    void RegisterGlobals();
+    void RegisterFunctions();
+    void GetScripts(std::string path, ScriptPaths& scripts);
+    void RunScripts(ScriptPaths& scripts);
     void Register(uint8 reg, uint32 id, uint32 evt, int func);
     void BeginCall(int fReference);
     bool ExecuteCall(int params, int res);
     void EndCall(int res);
-    void GetScripts(std::string path, ScriptPaths& scripts);
-    void RunScripts(ScriptPaths& scripts);
 
+    static void AddStateMsg(StateMsg* msg)
+    {
+        StateMsgQue.add(msg);
+    }
+
+    // Static functions so can access with plain L
     // Pushes
     static void Push(lua_State* L); // nil
     static void Push(lua_State* L, const uint64);
@@ -506,9 +635,54 @@ public:
         return ElunaTemplate<T>::check(L, narg, error);
     }
 
+    struct ObjectGUIDCheck
+    {
+        ObjectGUIDCheck(ObjectGuid guid): _guid(guid) {}
+        bool operator()(WorldObject* object)
+        {
+            return object->GET_GUID() == _guid;
+        }
+
+        ObjectGuid _guid;
+    };
+
+    // Binary predicate to sort WorldObjects based on the distance to a reference WorldObject
+    struct ObjectDistanceOrderPred
+    {
+        ObjectDistanceOrderPred(WorldObject const* pRefObj, bool ascending = true): m_refObj(pRefObj), m_ascending(ascending) {}
+        bool operator()(WorldObject const* pLeft, WorldObject const* pRight) const
+        {
+            return m_ascending ? m_refObj->GetDistanceOrder(pLeft, pRight) : !m_refObj->GetDistanceOrder(pLeft, pRight);
+        }
+
+        WorldObject const* m_refObj;
+        const bool m_ascending;
+    };
+
+    // Doesn't get self
+    struct WorldObjectInRangeCheck
+    {
+        WorldObjectInRangeCheck(bool nearest, WorldObject const* obj, float range,
+            uint16 typeMask = 0, uint32 entry = 0, uint32 hostile = 0):
+            i_obj(obj), i_range(range), i_typeMask(typeMask),
+            i_entry(entry), i_nearest(nearest), i_hostile(hostile)
+        {
+        }
+        WorldObject const& GetFocusObject() const { return *i_obj; }
+        bool operator()(WorldObject* u);
+        WorldObject const* i_obj;
+        float i_range;
+        uint16 i_typeMask;
+        uint32 i_entry;
+        bool i_nearest;
+        uint32 i_hostile;
+
+        WorldObjectInRangeCheck(WorldObjectInRangeCheck const&);
+    };
+
     /* Custom */
+    void OnStateMessage(StateMsg* msg);
     bool OnCommand(Player* player, const char* text);
-    void OnWorldUpdate(uint32 diff);
     void OnLootItem(Player* pPlayer, Item* pItem, uint32 count, uint64 guid);
     void OnLootMoney(Player* pPlayer, uint32 amount);
     void OnFirstLogin(Player* pPlayer);
@@ -529,7 +703,7 @@ public:
     void OnMotdChange(std::string& newMotd);
     void OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask);
     void OnShutdownCancel();
-    void OnUpdate(uint32 diff);
+    void OnWorldUpdate(uint32 diff);
     void OnStartup();
     void OnShutdown();
 
@@ -685,66 +859,10 @@ public:
     void OnPlayerEnter(Map* map, Player* player);
     void OnPlayerLeave(Map* map, Player* player);
     void OnUpdate(Map* map, uint32 diff);
-
-    struct ObjectGUIDCheck
-    {
-        ObjectGUIDCheck(ObjectGuid guid): _guid(guid) {}
-        bool operator()(WorldObject* object)
-        {
-            return object->GET_GUID() == _guid;
-        }
-
-        ObjectGuid _guid;
-    };
-
-    // Binary predicate to sort WorldObjects based on the distance to a reference WorldObject
-    struct ObjectDistanceOrderPred
-    {
-        ObjectDistanceOrderPred(WorldObject const* pRefObj, bool ascending = true): m_refObj(pRefObj), m_ascending(ascending) {}
-        bool operator()(WorldObject const* pLeft, WorldObject const* pRight) const
-        {
-            return m_ascending ? m_refObj->GetDistanceOrder(pLeft, pRight) : !m_refObj->GetDistanceOrder(pLeft, pRight);
-        }
-
-        WorldObject const* m_refObj;
-        const bool m_ascending;
-    };
-
-    // Doesn't get self
-    struct WorldObjectInRangeCheck
-    {
-        WorldObjectInRangeCheck(bool nearest, WorldObject const* obj, float range,
-            uint16 typeMask = 0, uint32 entry = 0, uint32 hostile = 0): i_nearest(nearest),
-            i_obj(obj), i_range(range), i_typeMask(typeMask), i_entry(entry), i_hostile(hostile)
-        {
-        }
-        WorldObject const& GetFocusObject() const { return *i_obj; }
-        bool operator()(WorldObject* u);
-        WorldObject const* i_obj;
-        float i_range;
-        uint16 i_typeMask;
-        uint32 i_entry;
-        bool i_nearest;
-        uint32 i_hostile;
-
-        WorldObjectInRangeCheck(WorldObjectInRangeCheck const&);
-    };
 };
 template<> Unit* Eluna::CHECKOBJ<Unit>(lua_State* L, int narg, bool error);
 template<> Player* Eluna::CHECKOBJ<Player>(lua_State* L, int narg, bool error);
 template<> Creature* Eluna::CHECKOBJ<Creature>(lua_State* L, int narg, bool error);
 template<> GameObject* Eluna::CHECKOBJ<GameObject>(lua_State* L, int narg, bool error);
 template<> Corpse* Eluna::CHECKOBJ<Corpse>(lua_State* L, int narg, bool error);
-
-#define ELUNA_GUARD() /*\
-ACE_Guard< ACE_Recursive_Thread_Mutex > ELUNA_GUARD_OBJECT(Eluna::lock);*/
-
-class LuaTaxiMgr
-{
-private:
-    static uint32 nodeId;
-public:
-    static void StartTaxi(Player* player, uint32 pathid);
-    static uint32 AddPath(std::list<TaxiPathNodeEntry> nodes, uint32 mountA, uint32 mountH, uint32 price = 0, uint32 pathId = 0);
-};
 #endif

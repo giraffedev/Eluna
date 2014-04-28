@@ -7,65 +7,6 @@
 #ifndef LUAHOOKS_H
 #define LUAHOOKS_H
 
-// Base
-#include "Common.h"
-#include "SharedDefines.h"
-#include <ace/Singleton.h>
-#include <ace/Atomic_Op.h>
-// enums
-#ifdef MANGOS
-#include "Player.h"
-#else
-#include "GameObjectAI.h"
-#endif
-#include "Group.h"
-#include "Item.h"
-#include "Weather.h"
-
-#ifdef MANGOS
-typedef SpellEffectIndex SpellEffIndex;
-typedef SpellEntry SpellInfo;
-typedef ItemPrototype ItemTemplate;
-#define GetTemplate             GetProto
-#ifdef CLASSIC
-typedef int Difficulty;
-#endif
-#endif
-
-struct AreaTriggerEntry;
-#ifdef MANGOS
-class ReactorAI;
-typedef ReactorAI ScriptedAI;
-#else
-struct ScriptedAI;
-#endif
-class AuctionHouseObject;
-class Channel;
-class Creature;
-class CreatureAI;
-class GameObject;
-class Guild;
-class Group;
-class Item;
-class Player;
-class Quest;
-class Spell;
-class SpellCastTargets;
-class Transport;
-class Unit;
-class Weather;
-class WorldPacket;
-#ifndef CLASSIC
-#ifndef TBC
-#ifdef TRINITY
-class Vehicle;
-#else
-class VehicleInfo;
-typedef VehicleInfo Vehicle;
-#endif
-#endif
-#endif
-
 enum RegisterTypes
 {
     REGTYPE_PACKET,
@@ -137,6 +78,8 @@ enum ServerEvents
 
 	// AddOns
     ADDON_EVENT_ON_MESSAGE                  =     30,       // (event, sender, type, prefix, msg, target) - target can be nil/whisper_target/guid/group/channel
+
+    ELUNA_EVENT_ON_STATE_MSG                =     31,       // (event, value1, value2...) - value is nil/bool/string/number
 
     SERVER_EVENT_COUNT
 };
@@ -317,4 +260,5 @@ enum GossipEvents
     GOSSIP_EVENT_ON_SELECT                          = 2,    // (event, player, object, sender, intid, code, menu_id) - Object is the Creature/GameObject/Item/Player, menu_id is only for player gossip
     GOSSIP_EVENT_COUNT
 };
+
 #endif

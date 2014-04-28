@@ -45,7 +45,7 @@ enum ServerEvents
     // World // Not implemented on mangos
     WORLD_EVENT_ON_OPEN_STATE_CHANGE        =     8,        // (event, open)
     WORLD_EVENT_ON_CONFIG_LOAD              =     9,        // (event, reload)
-    WORLD_EVENT_ON_MOTD_CHANGE              =     10,       // (event, newMOTD)
+    // UNUSED                               =     10,       // (event)
     WORLD_EVENT_ON_SHUTDOWN_INIT            =     11,       // (event, code, mask)
     WORLD_EVENT_ON_SHUTDOWN_CANCEL          =     12,       // (event)
     WORLD_EVENT_ON_UPDATE                   =     13,       // (event, diff)

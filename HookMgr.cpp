@@ -215,51 +215,6 @@ bool Eluna::OnAddonMessage(Player* sender, uint32 type, std::string& msg, Player
     return true;
 }
 
-#ifndef MANGOS
-class ElunaWorldAI : public WorldScript
-{
-public:
-    ElunaWorldAI(): WorldScript("ElunaWorldAI") {}
-    ~ElunaWorldAI() {}
-
-    void OnOpenStateChange(bool open) OVERRIDE
-    {
-        Eluna::GEluna.OnOpenStateChange(open);
-    }
-
-        void OnConfigLoad(bool reload) OVERRIDE
-    {
-        Eluna::GEluna.OnConfigLoad(reload);
-    }
-
-        void OnMotdChange(std::string& newMotd) OVERRIDE
-    {
-        Eluna::GEluna.OnMotdChange(newMotd);
-    }
-
-        void OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask) OVERRIDE
-    {
-        Eluna::GEluna.OnShutdownInitiate(code, mask);
-    }
-
-        void OnShutdownCancel() OVERRIDE
-    {
-        Eluna::GEluna.OnShutdownCancel();
-    }
-
-        void OnStartup() OVERRIDE
-    {
-        Eluna::GEluna.OnStartup();
-    }
-
-        void OnShutdown() OVERRIDE
-    {
-        Eluna::GEluna.OnShutdown();
-    }
-};
-#endif
-
-
 void Eluna::OnOpenStateChange(bool open)
 {
     if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_OPEN_STATE_CHANGE))
@@ -276,16 +231,6 @@ void Eluna::OnConfigLoad(bool reload)
         return;
     ServerEventBindings.BeginCall(WORLD_EVENT_ON_CONFIG_LOAD);
     Push(L, reload);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
-}
-
-void Eluna::OnMotdChange(std::string& newMotd)
-{
-    if (!ServerEventBindings.HasEvents(WORLD_EVENT_ON_MOTD_CHANGE))
-        return;
-    ServerEventBindings.BeginCall(WORLD_EVENT_ON_MOTD_CHANGE);
-    Push(L, newMotd);
     ServerEventBindings.ExecuteCall();
     ServerEventBindings.EndCall();
 }
@@ -515,7 +460,8 @@ bool Eluna::OnCommand(Player* player, const char* text)
             std::transform(eluna.begin(), eluna.end(), eluna.begin(), ::tolower);
             if (std::string("eluna").find(eluna) == 0)
             {
-                luaL_error(L, "Reloading is disabled at the moment");
+                sWorld->SendServerMessage(SERVER_MSG_STRING, "Reloading is disabled at the moment");
+                ELUNA_LOG_ERROR("Reloading is disabled at the moment");
                 // sWorld->SendServerMessage(SERVER_MSG_STRING, "Reloading Eluna...");
                 // StartEluna();
                 return false;
@@ -2245,11 +2191,4 @@ void Eluna::OnSpawn(GameObject* gameobject)
     Push(L, GAMEOBJECT_EVENT_ON_SPAWN);
     Push(L, gameobject);
     ExecuteCall(2, 0);
-}
-
-void AddElunaScripts()
-{
-#ifndef MANGOS
-    new ElunaWorldAI();
-#endif
 }

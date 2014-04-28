@@ -31,18 +31,18 @@
 ElunaFunctions GlobalFunctions[] =
 {
     // Hooks
-    { ENV_WORLD, "RegisterPacketEvent", &LuaGlobalFunctions::RegisterPacketEvent },                       // RegisterPacketEvent(opcodeID, function)
-    { ENV_WORLD, "RegisterServerEvent", &LuaGlobalFunctions::RegisterServerEvent },                       // RegisterServerEvent(event, function)
-    { ENV_WORLD, "RegisterPlayerEvent", &LuaGlobalFunctions::RegisterPlayerEvent },                       // RegisterPlayerEvent(event, function)
-    { ENV_WORLD, "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent },                         // RegisterGuildEvent(event, function)
-    { ENV_WORLD, "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent },                         // RegisterGroupEvent(event, function)
-    { ENV_MAP, "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent },                   // RegisterCreatureEvent(entry, event, function)
-    { ENV_MAP, "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent },               // RegisterGameObjectEvent(entry, event, function)
-    { ENV_MAP, "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent },                           // RegisterItemEvent(entry, event, function)
-    { ENV_MAP, "RegisterCreatureGossipEvent", &LuaGlobalFunctions::RegisterCreatureGossipEvent },       // RegisterCreatureGossipEvent(entry, event, function)
-    { ENV_MAP, "RegisterGameObjectGossipEvent", &LuaGlobalFunctions::RegisterGameObjectGossipEvent },   // RegisterGameObjectGossipEvent(entry, event, function)
-    { ENV_MAP, "RegisterItemGossipEvent", &LuaGlobalFunctions::RegisterItemGossipEvent },               // RegisterItemGossipEvent(entry, event, function)
-    { ENV_MAP, "RegisterPlayerGossipEvent", &LuaGlobalFunctions::RegisterPlayerGossipEvent },           // RegisterPlayerGossipEvent(menu_id, event, function)
+    { ENV_GLOBAL, "RegisterServerEvent", &LuaGlobalFunctions::RegisterServerEvent },                       // RegisterServerEvent(event, function)
+    { ENV_GLOBAL, "RegisterPacketEvent", &LuaGlobalFunctions::RegisterPacketEvent },                       // RegisterPacketEvent(opcodeID, function)
+    { ENV_GLOBAL, "RegisterPlayerEvent", &LuaGlobalFunctions::RegisterPlayerEvent },                       // RegisterPlayerEvent(event, function)
+    { ENV_GLOBAL, "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent },                         // RegisterGuildEvent(event, function)
+    { ENV_GLOBAL, "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent },                         // RegisterGroupEvent(event, function)
+    { ENV_GLOBAL, "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent },                   // RegisterCreatureEvent(entry, event, function)
+    { ENV_GLOBAL, "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent },               // RegisterGameObjectEvent(entry, event, function)
+    { ENV_GLOBAL, "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent },                           // RegisterItemEvent(entry, event, function)
+    { ENV_GLOBAL, "RegisterCreatureGossipEvent", &LuaGlobalFunctions::RegisterCreatureGossipEvent },       // RegisterCreatureGossipEvent(entry, event, function)
+    { ENV_GLOBAL, "RegisterGameObjectGossipEvent", &LuaGlobalFunctions::RegisterGameObjectGossipEvent },   // RegisterGameObjectGossipEvent(entry, event, function)
+    { ENV_GLOBAL, "RegisterItemGossipEvent", &LuaGlobalFunctions::RegisterItemGossipEvent },               // RegisterItemGossipEvent(entry, event, function)
+    { ENV_GLOBAL, "RegisterPlayerGossipEvent", &LuaGlobalFunctions::RegisterPlayerGossipEvent },           // RegisterPlayerGossipEvent(menu_id, event, function)
 
     // Getters
     { ENV_GLOBAL, "GetLuaEngine", &LuaGlobalFunctions::GetLuaEngine },                                     // GetLuaEngine() - Returns ElunaEngine
@@ -105,7 +105,7 @@ ElunaFunctions GlobalFunctions[] =
     { ENV_GLOBAL, "SendFineWeatherToPlayer", &LuaGlobalFunctions::SendFineWeatherToPlayer },               // SendFineWeatherToPlayer(player) - Sends WEATHER_STATE_FINE weather to the
     { ENV_GLOBAL, "DoForPlayersInWorld", &LuaGlobalFunctions::DoForPlayersInWorld },                       // DoForPlayersInWorld(function(player)) - Calls given function for all players in world. Passes player to the function.
     { ENV_MAP, "SendStateMsg", &LuaGlobalFunctions::map_SendStateMsg },                                    // SendStateMsg([target_map, target_instanceid, value1, value2...]) - Sends an async message to given map lua state if exists (triggers ELUNA_EVENT_ON_STATE_MSG). Sends to world state if map is nil.
-    { ENV_WORLD, "SendStateMsg", &LuaGlobalFunctions::world_SendStateMsg },                                // SendStateMsg([target_map, target_instanceid, value1, value2...]) - Sends a direct message to given map lua state if exists (triggers ELUNA_EVENT_ON_STATE_MSG). Sends to world state if map is nil.
+    { ENV_WORLD, "SendStateMsg", &LuaGlobalFunctions::world_SendStateMsg },                                // SendStateMsg([target_map, target_instanceid, value1, value2...]) - Sends a direct message to given map lua state if exists (triggers ELUNA_EVENT_ON_STATE_MSG). Sends to world state if map is nil (or -1).
 
     { ENV_NONE, NULL, NULL }
 };

@@ -35,7 +35,7 @@ void StateMsg::Data::Push(lua_State* L) const
 Eluna* StateMsg::GetTarget() const
 {
     if (t_mapid == MAPID_INVALID)
-        return &Eluna::GEluna;
+        return Eluna::GEluna;
     if (Map* map = sMapMgr->FindMap(t_mapid, t_instanceid))
         return map->GetEluna();
     return NULL;
@@ -51,7 +51,7 @@ template <typename K, typename V> UNORDERED_MAP< K, V > RWHashMap<K, V>::hashmap
 template <typename K, typename V> typename RWHashMap< K, V >::LockType RWHashMap<K, V>::lock;
 template class RWHashMap<lua_State*, Eluna*>;
 ACE_Based::LockedQueue<StateMsg*, ACE_Thread_Mutex> Eluna::StateMsgQue;
-Eluna Eluna::GEluna(NULL);
+Eluna* Eluna::GEluna = NULL;
 
 Eluna* Eluna::GetEluna(lua_State* L)
 {
@@ -66,6 +66,11 @@ Eluna* Eluna::GetEluna(lua_State* L)
 //            return it->second;
 //    return NULL;
 //}
+
+void Eluna::Initialize()
+{
+    GEluna = new Eluna(NULL);
+}
 
 Eluna::Eluna(Map* _map):
 GMap(_map),
@@ -242,11 +247,11 @@ void Eluna::RunScripts(ScriptPaths& scripts)
         if (!luaL_loadfile(L, it->c_str()) && !lua_pcall(L, 0, 0, 0))
         {
             // successfully loaded and ran file
-            ELUNA_LOG_DEBUG("[Eluna]: Successfully loaded `%s`", it->c_str());
+            ELUNA_LOG_DEBUG("[Eluna]: Successfully loaded `%s` on map %u", it->c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
             ++count;
             continue;
         }
-        ELUNA_LOG_ERROR("[Eluna]: Error loading file `%s`", it->c_str());
+        ELUNA_LOG_ERROR("[Eluna]: Error loading file `%s` on map %u", it->c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
         report(L);
     }
     ELUNA_LOG_INFO("[Eluna]: Loaded %u Lua scripts", count);

@@ -552,6 +552,7 @@ private:
 class Eluna
 {
     friend class Map;
+    friend class World;
 
 private:
     Eluna(const Eluna&);
@@ -562,6 +563,8 @@ private:
 
     static ACE_Based::LockedQueue<StateMsg*, ACE_Thread_Mutex> StateMsgQue;
 
+    // Used on world start right after scriptmgr initialize
+    static void Initialize();
     Eluna(Map* _map);
     ~Eluna();
 
@@ -570,7 +573,7 @@ public:
     EventMgr m_EventMgr;
     lua_State* L; // Always valid
 
-    static Eluna GEluna; // NOTE! only use for threadunsafe hooks (world update)
+    static Eluna* GEluna; // NOTE! only use for threadunsafe hooks (world update)
     static Eluna* GetEluna(lua_State* L); // Using lock for thread safety, use seldom
     //static Eluna* GetEluna(Map* map);
 
@@ -700,7 +703,6 @@ public:
     /* Server */
     void OnOpenStateChange(bool open);
     void OnConfigLoad(bool reload);
-    void OnMotdChange(std::string& newMotd);
     void OnShutdownInitiate(ShutdownExitCode code, ShutdownMask mask);
     void OnShutdownCancel();
     void OnWorldUpdate(uint32 diff);

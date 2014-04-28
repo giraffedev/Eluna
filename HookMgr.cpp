@@ -18,11 +18,11 @@ void Eluna::OnStateMessage(StateMsg* msg)
     ServerEventBindings.EndCall();
 }
 
-void Eluna::OnEngineRestart()
+void Eluna::OnCloseLua()
 {
-    if (!ServerEventBindings.HasEvents(ELUNA_EVENT_ON_RESTART))
+    if (!ServerEventBindings.HasEvents(ELUNA_EVENT_ON_LUA_STATE_CLOSE))
         return;
-    ServerEventBindings.BeginCall(ELUNA_EVENT_ON_RESTART);
+    ServerEventBindings.BeginCall(ELUNA_EVENT_ON_LUA_STATE_CLOSE);
     ServerEventBindings.ExecuteCall();
     ServerEventBindings.EndCall();
 }
@@ -460,10 +460,8 @@ bool Eluna::OnCommand(Player* player, const char* text)
             std::transform(eluna.begin(), eluna.end(), eluna.begin(), ::tolower);
             if (std::string("eluna").find(eluna) == 0)
             {
-                sWorld->SendServerMessage(SERVER_MSG_STRING, "Reloading is disabled at the moment");
-                ELUNA_LOG_ERROR("Reloading is disabled at the moment");
-                // sWorld->SendServerMessage(SERVER_MSG_STRING, "Reloading Eluna...");
-                // StartEluna();
+                ReloadLuaStates();
+                sWorld->SendServerMessage(SERVER_MSG_STRING, "Eluna reloaded.");
                 return false;
             }
         }
@@ -1629,7 +1627,7 @@ struct ElunaCreatureAI : ScriptedAI
         // Enables use of MoveInLineOfSight
         bool IsVisible(Unit* who) const OVERRIDE
     {
-        return me->IsWithinLOSInMap(who);
+        return true;
     }
 #endif
 

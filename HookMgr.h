@@ -53,7 +53,7 @@ enum ServerEvents
     WORLD_EVENT_ON_SHUTDOWN                 =     15,       // (event)
 
     // Eluna
-    ELUNA_EVENT_ON_RESTART                  =     16,       // (event)
+    ELUNA_EVENT_ON_LUA_STATE_CLOSE          =     16,       // (event)
 
     // Map
     MAP_EVENT_ON_CREATE                     =     17,       // (event, map)
@@ -210,7 +210,7 @@ enum CreatureEvents
     CREATURE_EVENT_ON_REACH_HOME                      = 24, // (event, creature)
     // UNUSED                                         = 25, // (event, creature)
     CREATURE_EVENT_ON_CORPSE_REMOVED                  = 26, // (event, creature, respawndelay)
-    CREATURE_EVENT_ON_MOVE_IN_LOS                     = 27, // (event, creature, unit)
+    CREATURE_EVENT_ON_MOVE_IN_LOS                     = 27, // (event, creature, unit) // Doesnt actually check LOS
     // UNUSED                                         = 28, // (event, creature)
     // UNUSED                                         = 29, // (event, creature)
     CREATURE_EVENT_ON_DUMMY_EFFECT                    = 30, // (event, caster, spellid, effindex, creature)

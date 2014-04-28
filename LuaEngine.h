@@ -14,6 +14,7 @@ extern "C"
 #include "lauxlib.h"
 };
 
+#include <ace/Atomic_Op.h>
 #include "HookMgr.h"
 
 // Base
@@ -180,22 +181,22 @@ public:
 
     static void Insert(K key, V value)
     {
-        ACE_Write_Guard< LockType > GUARD(lock); \
-            if (GUARD.locked() == 0) ASSERT(false);
+        ACE_Write_Guard< LockType > GUARD(lock);
+        if (GUARD.locked() == 0) ASSERT(false);
         hashmap[key] = value;
     }
 
     static void Remove(K key)
     {
-        ACE_Write_Guard< LockType > GUARD(lock); \
-            if (GUARD.locked() == 0) ASSERT(false);
+        ACE_Write_Guard< LockType > GUARD(lock);
+        if (GUARD.locked() == 0) ASSERT(false);
         hashmap.erase(key);
     }
 
     static V Find(K key)
     {
-        ACE_Read_Guard< LockType > GUARD(lock); \
-            if (GUARD.locked() == 0) ASSERT(false);
+        ACE_Read_Guard< LockType > GUARD(lock);
+        if (GUARD.locked() == 0) ASSERT(false);
         typename MapType::iterator itr = hashmap.find(key);
         return (itr != hashmap.end()) ? itr->second : NULL;
     }
@@ -553,6 +554,7 @@ class Eluna
 {
     friend class Map;
     friend class World;
+    friend class WorldRunnable;
 
 private:
     Eluna(const Eluna&);
@@ -563,8 +565,10 @@ private:
 
     static ACE_Based::LockedQueue<StateMsg*, ACE_Thread_Mutex> StateMsgQue;
 
-    // Used on world start right after scriptmgr initialize
+    // Used to start global lua state. MUST be used before ANY hook is triggered.
     static void Initialize();
+    // Used to stop global lua state. Should be after all maps unload and after shutdown hook
+    static void Uninitialize();
     Eluna(Map* _map);
     ~Eluna();
 
@@ -593,6 +597,9 @@ public:
     EntryBind ItemGossipBindings;
     EntryBind playerGossipBindings;
 
+    // FOR TESTING ONLY! Closes and starts lua states for all maps and the global one.
+    // Thread unsafe and only locks on delete!
+    static void ReloadLuaStates();
     static void report(lua_State* L);
     void RegisterGlobals();
     void RegisterFunctions();
@@ -697,7 +704,7 @@ public:
     void OnGmTicketUpdate(Player* pPlayer, std::string& ticketText);
     void OnGmTicketDelete(Player* pPlayer);
     InventoryResult OnCanUseItem(const Player* pPlayer, uint32 itemEntry);
-    void OnEngineRestart();
+    void OnCloseLua();
     bool OnAddonMessage(Player* sender, uint32 type, std::string& msg, Player* receiver, Guild* guild, Group* group, Channel* channel);
 
     /* Server */

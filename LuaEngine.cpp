@@ -72,6 +72,11 @@ void Eluna::Initialize()
     GEluna = new Eluna(NULL);
 }
 
+void Eluna::Uninitialize()
+{
+    delete GEluna;
+}
+
 Eluna::Eluna(Map* _map):
 GMap(_map),
 L(luaL_newstate()),
@@ -91,6 +96,7 @@ ItemGossipBindings(*this),
 playerGossipBindings(*this)
 {
     ELUNA_LOG_DEBUG("[Eluna]: Creating new lua state");
+    uint32 oldMSTime = getMSTime();
     ElunaMap.Insert(L, this);
     luaL_openlibs(L);
     RegisterFunctions();
@@ -99,6 +105,7 @@ playerGossipBindings(*this)
     Eluna::GetScripts("lua_scripts", scripts);
     Eluna::GetScripts("lua_scripts/extensions", scripts);
     Eluna::RunScripts(scripts);
+    ELUNA_LOG_DEBUG("[Eluna]: Loaded %u Lua scripts in %u ms", scripts.size(), GetMSTimeDiffToNow(oldMSTime));
 
     /*
     if (restart)
@@ -133,6 +140,8 @@ playerGossipBindings(*this)
 Eluna::~Eluna()
 {
     ELUNA_LOG_DEBUG("[Eluna]: Closing lua state");
+    OnCloseLua();
+
     ElunaMap.Remove(L);
 
     // Unregisters and stops all timed events
@@ -192,6 +201,28 @@ Eluna::~Eluna()
 //    return true;
 //}
 
+void Eluna::ReloadLuaStates()
+{
+    ELUNA_LOG_INFO("Reloading Lua states...");
+    uint32 oldMSTime = getMSTime();
+    std::vector<Map*> reloaded_maps;
+    Eluna::ElunaMapData::MapType& states = ElunaMap.GetContainer();
+    Eluna::ElunaMapData::MapType::const_iterator it;
+    // Delete old states and store maps that had states
+    while ((it = states.begin()) != states.end())
+    {
+        if (it->second->GMap) // skip global
+            reloaded_maps.push_back(it->second->GMap);
+        delete it->second;
+    }
+    // create global state
+    Eluna::GEluna = new Eluna(NULL);
+    // create new map states
+    for (std::vector<Map*>::const_iterator it = reloaded_maps.begin(); it != reloaded_maps.end(); ++it)
+        (*it)->luadata = new Eluna(*it);
+    ELUNA_LOG_INFO("Reloaded %u lua states in %u ms", reloaded_maps.size() + 1, GetMSTimeDiffToNow(oldMSTime));
+}
+
 // Finds lua script files from given path (including subdirectories) and pushes them to scripts
 void Eluna::GetScripts(std::string path, ScriptPaths& scripts)
 {
@@ -240,21 +271,20 @@ void Eluna::GetScripts(std::string path, ScriptPaths& scripts)
 
 void Eluna::RunScripts(ScriptPaths& scripts)
 {
-    uint32 count = 0;
     // load last first to load extensions first
-    for (ScriptPaths::const_reverse_iterator it = scripts.rbegin(); it != scripts.rend(); ++it)
+    for (ScriptPaths::const_reverse_iterator it = scripts.rbegin(); it != scripts.rend();)
     {
         if (!luaL_loadfile(L, it->c_str()) && !lua_pcall(L, 0, 0, 0))
         {
             // successfully loaded and ran file
             ELUNA_LOG_DEBUG("[Eluna]: Successfully loaded `%s` on map %u", it->c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
-            ++count;
+            ++it;
             continue;
         }
         ELUNA_LOG_ERROR("[Eluna]: Error loading file `%s` on map %u", it->c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
         report(L);
+        scripts.erase(*it);
     }
-    ELUNA_LOG_INFO("[Eluna]: Loaded %u Lua scripts", count);
 }
 
 void Eluna::report(lua_State* L)

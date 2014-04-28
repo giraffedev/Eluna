@@ -36,9 +36,9 @@ ElunaFunctions GlobalFunctions[] =
     { ENV_GLOBAL, "RegisterPlayerEvent", &LuaGlobalFunctions::RegisterPlayerEvent },                       // RegisterPlayerEvent(event, function)
     { ENV_GLOBAL, "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent },                         // RegisterGuildEvent(event, function)
     { ENV_GLOBAL, "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent },                         // RegisterGroupEvent(event, function)
-    { ENV_GLOBAL, "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent },                   // RegisterCreatureEvent(entry, event, function)
-    { ENV_GLOBAL, "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent },               // RegisterGameObjectEvent(entry, event, function)
-    { ENV_GLOBAL, "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent },                           // RegisterItemEvent(entry, event, function)
+    { ENV_MAP, "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent },                      // RegisterCreatureEvent(entry, event, function)
+    { ENV_MAP, "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent },                  // RegisterGameObjectEvent(entry, event, function)
+    { ENV_MAP, "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent },                              // RegisterItemEvent(entry, event, function)
     { ENV_GLOBAL, "RegisterCreatureGossipEvent", &LuaGlobalFunctions::RegisterCreatureGossipEvent },       // RegisterCreatureGossipEvent(entry, event, function)
     { ENV_GLOBAL, "RegisterGameObjectGossipEvent", &LuaGlobalFunctions::RegisterGameObjectGossipEvent },   // RegisterGameObjectGossipEvent(entry, event, function)
     { ENV_GLOBAL, "RegisterItemGossipEvent", &LuaGlobalFunctions::RegisterItemGossipEvent },               // RegisterItemGossipEvent(entry, event, function)
@@ -50,12 +50,12 @@ ElunaFunctions GlobalFunctions[] =
     { ENV_GLOBAL, "GetCoreVersion", &LuaGlobalFunctions::GetCoreVersion },                                 // GetCoreVersion() - Returns core version string
     { ENV_GLOBAL, "GetCoreExpansion", &LuaGlobalFunctions::GetCoreExpansion },                             // GetCoreExpansion() - Returns core expansion number (0 for classic, 1 for tbc, 2 for wotlk, 3 for cata), returns nil if not found.
     { ENV_GLOBAL, "GetQuest", &LuaGlobalFunctions::GetQuest },                                             // GetQuest(questId) - Returns quest object
-    { ENV_GLOBAL, "GetPlayerByGUID", &LuaGlobalFunctions::GetPlayerByGUID },                               // GetPlayerByGUID(guid) - Returns player object by GUID
-    { ENV_GLOBAL, "GetPlayerByName", &LuaGlobalFunctions::GetPlayerByName },                               // GetPlayerByName(name) - Returns player object by player name
+    { ENV_WORLD, "GetPlayerByGUID", &LuaGlobalFunctions::GetPlayerByGUID },                                // GetPlayerByGUID(guid) - Returns player object by GUID
+    { ENV_WORLD, "GetPlayerByName", &LuaGlobalFunctions::GetPlayerByName },                                // GetPlayerByName(name) - Returns player object by player name
     { ENV_GLOBAL, "GetGameTime", &LuaGlobalFunctions::GetGameTime },                                       // GetGameTime() - Returns game time
-    { ENV_GLOBAL, "GetPlayersInMap", &LuaGlobalFunctions::GetPlayersInMap },                               // GetPlayersInWorld(mapId[, instanceId, team]) - Returns a table with all player objects in map. Team can be 0 for ally, 1 for horde and 2 for neutral
-    { ENV_GLOBAL, "GetGuildByName", &LuaGlobalFunctions::GetGuildByName },                                 // GetGuildByName(name) - Returns guild object by the guild name
-    { ENV_GLOBAL, "GetGuildByLeaderGUID", &LuaGlobalFunctions::GetGuildByLeaderGUID },                     // GetGuildByLeaderGUID(guid) - Returns guild by it's leader's guid
+    { ENV_WORLD, "GetPlayersInMap", &LuaGlobalFunctions::GetPlayersInMap },                                // GetPlayersInMap(mapId[, instanceId, team]) - Returns a table with all player objects in map. Team can be 0 for ally, 1 for horde and 2 for neutral
+    { ENV_WORLD, "GetGuildByName", &LuaGlobalFunctions::GetGuildByName },                                  // GetGuildByName(name) - Returns guild object by the guild name
+    { ENV_WORLD, "GetGuildByLeaderGUID", &LuaGlobalFunctions::GetGuildByLeaderGUID },                      // GetGuildByLeaderGUID(guid) - Returns guild by it's leader's guid
     { ENV_GLOBAL, "GetPlayerCount", &LuaGlobalFunctions::GetPlayerCount },                                 // GetPlayerCount() - Returns the server's player count
     { ENV_GLOBAL, "GetPlayerGUID", &LuaGlobalFunctions::GetPlayerGUID },                                   // GetPlayerGUID(lowguid) - Generates GUID (uint64) string from player lowguid UNDOCUMENTED
     { ENV_GLOBAL, "GetItemGUID", &LuaGlobalFunctions::GetItemGUID },                                       // GetItemGUID(lowguid) - Generates GUID (uint64) string from item lowguid UNDOCUMENTED
@@ -82,27 +82,27 @@ ElunaFunctions GlobalFunctions[] =
     { ENV_GLOBAL, "CharDBExecute", &LuaGlobalFunctions::CharDBExecute },                                   // CharDBExecute(sql) - Executes given SQL query to character database (not instant)
     { ENV_GLOBAL, "AuthDBQuery", &LuaGlobalFunctions::AuthDBQuery },                                       // AuthDBQuery(sql) - Executes given SQL query to auth/logon database instantly and returns a QueryResult object
     { ENV_GLOBAL, "AuthDBExecute", &LuaGlobalFunctions::AuthDBExecute },                                   // AuthDBExecute(sql) - Executes given SQL query to auth/logon database (not instant)
-    { ENV_GLOBAL, "CreateLuaEvent", &LuaGlobalFunctions::CreateLuaEvent },                                 // CreateLuaEvent(function, delay, calls) - Creates a global timed event. Returns Event ID. Calls set to 0 calls infinitely.
-    { ENV_GLOBAL, "RemoveEventById", &LuaGlobalFunctions::RemoveEventById },                               // RemoveEventById(eventId, [all_events]) - Removes a global timed event by it's ID. If all_events is true, can remove any timed event by ID (unit, gameobject, global..)
-    { ENV_GLOBAL, "RemoveEvents", &LuaGlobalFunctions::RemoveEvents },                                     // RemoveEvents([all_events]) - Removes all global timed events. Removes all timed events (unit, gameobject, global) if all_events is true
-    { ENV_GLOBAL, "PerformIngameSpawn", &LuaGlobalFunctions::PerformIngameSpawn },                         // PerformIngameSpawn(spawntype, entry, mapid, instanceid, x, y, z, o[, save, DurOrResptime, phase]) - spawntype: 1 Creature, 2 Object. DurOrResptime is respawntime for gameobjects and despawntime for creatures if creature is not saved. Returns spawned creature/gameobject
+    { ENV_GLOBAL, "CreateLuaEvent", &LuaGlobalFunctions::CreateLuaEvent },                                 // CreateLuaEvent(function, delay, calls) - Creates an independent timed event. Returns Event ID. Calls set to 0 calls infinitely. Limited to current lua state (map or global)
+    { ENV_GLOBAL, "RemoveEventById", &LuaGlobalFunctions::RemoveEventById },                               // RemoveEventById(eventId, [all_events]) - Removes an independent timed event by it's ID. If all_events is true, can remove any timed event by ID (unit, gameobject, ..) Limited to current lua state (map or global)
+    { ENV_GLOBAL, "RemoveEvents", &LuaGlobalFunctions::RemoveEvents },                                     // RemoveEvents([all_events]) - Removes all global timed events. Removes all timed events (unit, gameobject, global) if all_events is true Limited to current lua state (map or global)
+    { ENV_WORLD, "PerformIngameSpawn", &LuaGlobalFunctions::PerformIngameSpawn },                          // PerformIngameSpawn(spawntype, entry, mapid, instanceid, x, y, z, o[, save, DurOrResptime, phase]) - spawntype: 1 Creature, 2 Object. DurOrResptime is respawntime for gameobjects and despawntime for creatures if creature is not saved. Returns spawned creature/gameobject
     { ENV_GLOBAL, "CreatePacket", &LuaGlobalFunctions::CreatePacket },                                     // CreatePacket(opcode, size) - Creates a new packet object
-    { ENV_GLOBAL, "AddVendorItem", &LuaGlobalFunctions::AddVendorItem },                                   // AddVendorItem(entry, itemId, maxcount, incrtime, extendedcost) - Adds an item to vendor entry.
-    { ENV_GLOBAL, "VendorRemoveItem", &LuaGlobalFunctions::VendorRemoveItem },                             // VendorRemoveItem(entry, item) - Removes an item from vendor entry
-    { ENV_GLOBAL, "VendorRemoveAllItems", &LuaGlobalFunctions::VendorRemoveAllItems },                     // VendorRemoveAllItems(entry) - Removes all items from vendor entry
-    { ENV_GLOBAL, "Kick", &LuaGlobalFunctions::Kick },                                                     // Kick(player) - Kicks given player
+    { ENV_WORLD, "AddVendorItem", &LuaGlobalFunctions::AddVendorItem },                                    // AddVendorItem(entry, itemId, maxcount, incrtime, extendedcost) - Adds an item to vendor entry.
+    { ENV_WORLD, "VendorRemoveItem", &LuaGlobalFunctions::VendorRemoveItem },                              // VendorRemoveItem(entry, item) - Removes an item from vendor entry
+    { ENV_WORLD, "VendorRemoveAllItems", &LuaGlobalFunctions::VendorRemoveAllItems },                      // VendorRemoveAllItems(entry) - Removes all items from vendor entry
+    { ENV_GLOBAL, "Kick", &LuaGlobalFunctions::Kick },                                                     // Kick(player) - Kicks given player - Move to player methods
     { ENV_GLOBAL, "Ban", &LuaGlobalFunctions::Ban },                                                       // Ban(banMode(integer), nameOrIP(string), duration(string), reason(string), player(whoBanned)) - Banmode: 0 account, 1 character, 2 IP
     { ENV_GLOBAL, "SaveAllPlayers", &LuaGlobalFunctions::SaveAllPlayers },                                 // SaveAllPlayers() - Saves all players
     { ENV_GLOBAL, "SendMail", &LuaGlobalFunctions::SendMail },                                             // SendMail(subject, text, receiverLowGUID[, senderLowGUID, stationary, delay, itemEntry, itemAmount, itemEntry2, itemAmount2...]) - Sends a mail to player with lowguid. use nil to use default values on optional arguments. UNDOCUMENTED
-    { ENV_GLOBAL, "AddTaxiPath", &LuaGlobalFunctions::AddTaxiPath },                                       // AddTaxiPath(pathTable, mountA, mountH[, price, pathId]) - Adds a new taxi path. Returns the path's ID. Will replace an existing path if pathId provided and already used. path table structure: T = {{map, x, y, z[, actionFlag, delay, arrivalEvId, departEvId]}, {...}, ...} UDOCUMENTED
+    { ENV_WORLD, "AddTaxiPath", &LuaGlobalFunctions::AddTaxiPath },                                        // AddTaxiPath(pathTable, mountA, mountH[, price, pathId]) - Adds a new taxi path. Returns the path's ID. Will replace an existing path if pathId provided and already used. path table structure: T = {{map, x, y, z[, actionFlag, delay, arrivalEvId, departEvId]}, {...}, ...} UDOCUMENTED
     { ENV_GLOBAL, "AddCorpse", &LuaGlobalFunctions::AddCorpse },                                           // AddCorpse(corpse) - Adds the player's corpse to the world. More specifically, the cell.
     { ENV_GLOBAL, "RemoveCorpse", &LuaGlobalFunctions::RemoveCorpse },                                     // RemoveCorpse(corpse) - Removes the player's corpse from the world.
     { ENV_GLOBAL, "ConvertCorpseForPlayer", &LuaGlobalFunctions::ConvertCorpseForPlayer },                 // ConvertCorpseFromPlayer(guid[, insignia]) - Converts the player's corpse to bones. Adding insignia for PvP is optional (true or false).
     { ENV_GLOBAL, "RemoveOldCorpses", &LuaGlobalFunctions::RemoveOldCorpses },                             // RemoveOldCorpses() - Converts (removes) old corpses that aren't bones.
-    { ENV_GLOBAL, "FindWeather", &LuaGlobalFunctions::FindWeather },                                       // FindWeather(zoneId) - Finds the weather by zoneId and returns the weather
-    { ENV_GLOBAL, "AddWeather", &LuaGlobalFunctions::AddWeather },                                         // AddWeather(zoneId) - Adds weather to the following zone, also returns weather
-    { ENV_GLOBAL, "RemoveWeather", &LuaGlobalFunctions::RemoveWeather },                                   // RemoveWeather(zoneId) - Removes weather from a zone
-    { ENV_GLOBAL, "SendFineWeatherToPlayer", &LuaGlobalFunctions::SendFineWeatherToPlayer },               // SendFineWeatherToPlayer(player) - Sends WEATHER_STATE_FINE weather to the
+    { ENV_WORLD, "FindWeather", &LuaGlobalFunctions::FindWeather },                                        // FindWeather(zoneId) - Finds the weather by zoneId and returns the weather
+    { ENV_WORLD, "AddWeather", &LuaGlobalFunctions::AddWeather },                                          // AddWeather(zoneId) - Adds weather to the following zone, also returns weather
+    { ENV_WORLD, "RemoveWeather", &LuaGlobalFunctions::RemoveWeather },                                    // RemoveWeather(zoneId) - Removes weather from a zone
+    { ENV_GLOBAL, "SendFineWeatherToPlayer", &LuaGlobalFunctions::SendFineWeatherToPlayer },               // SendFineWeatherToPlayer(player) - Sends WEATHER_STATE_FINE weather to the player - Move to player methods
     { ENV_GLOBAL, "DoForPlayersInWorld", &LuaGlobalFunctions::DoForPlayersInWorld },                       // DoForPlayersInWorld(function(player)) - Calls given function for all players in world. Passes player to the function.
     { ENV_MAP, "SendStateMsg", &LuaGlobalFunctions::map_SendStateMsg },                                    // SendStateMsg([target_map, target_instanceid, value1, value2...]) - Sends an async message to given map lua state if exists (triggers ELUNA_EVENT_ON_STATE_MSG). Sends to world state if map is nil.
     { ENV_WORLD, "SendStateMsg", &LuaGlobalFunctions::world_SendStateMsg },                                // SendStateMsg([target_map, target_instanceid, value1, value2...]) - Sends a direct message to given map lua state if exists (triggers ELUNA_EVENT_ON_STATE_MSG). Sends to world state if map is nil (or -1).
@@ -482,7 +482,7 @@ ElunaMethods<Player> PlayerMethods[] =
 #endif
 #endif
 #ifdef CLASSIC
-    {"SetHonorStoredKills", &LuaPlayer::SetHonorStoredKills},     // :SetHonorStoredKills(kills, [on/off])
+    { "SetHonorStoredKills", &LuaPlayer::SetHonorStoredKills},     // :SetHonorStoredKills(kills, [on/off])
     { "SetRankPoints", &LuaPlayer::SetRankPoints },                 // :SetRankPoints(rankPoints)
     { "SetHonorLastWeekStandingPos", &LuaPlayer::SetHonorLastWeekStandingPos }, // :SetHonorLastWeekStandingPos(standingPos)
 #endif

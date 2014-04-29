@@ -7,45 +7,11 @@
 #include "LuaEngine.h"
 #include "Includes.h"
 #include <ace/Dirent.h>
+#include <ace/OS_NS_fcntl.h>
 #include <ace/OS_NS_sys_stat.h>
 
 extern void RegisterFunctions(lua_State* L);
 extern void AddElunaScripts();
-
-void StateMsg::Data::Push(lua_State* L) const
-{
-    switch (_type)
-    {
-    default:
-    case TYPE_NIL:
-        Eluna::Push(L);
-        break;
-    case TYPE_BOOL:
-        Eluna::Push(L, _bool);
-        break;
-    case TYPE_STRING:
-        Eluna::Push(L, _str);
-        break;
-    case TYPE_NUMBER:
-        Eluna::Push(L, _num);
-        break;
-    }
-};
-
-Eluna* StateMsg::GetTarget() const
-{
-    if (t_mapid == MAPID_INVALID)
-        return Eluna::GEluna;
-    if (Map* map = sMapMgr->FindMap(t_mapid, t_instanceid))
-        return map->GetEluna();
-    return NULL;
-}
-
-void StateMsg::Push(lua_State* L) const
-{
-    for (MsgData::const_iterator it = msgs.begin(); it != msgs.end(); ++it)
-        it->Push(L);
-}
 
 template <typename K, typename V> UNORDERED_MAP< K, V > RWHashMap<K, V>::hashmap;
 template <typename K, typename V> typename RWHashMap< K, V >::LockType RWHashMap<K, V>::lock;
@@ -53,293 +19,10 @@ template class RWHashMap<lua_State*, Eluna*>;
 ACE_Based::LockedQueue<StateMsg*, ACE_Thread_Mutex> Eluna::StateMsgQue;
 Eluna* Eluna::GEluna = NULL;
 
-Eluna* Eluna::GetEluna(lua_State* L)
-{
-    return ElunaMap.Find(L);
-}
-//Eluna* Eluna::GetEluna(Map* map)
-//{
-//    if (!map)
-//        return NULL;
-//    for (ElunaMapData::const_iterator it = ElunaMap.begin(); it != ElunaMap.end(); ++it)
-//        if (it->second->map == map)
-//            return it->second;
-//    return NULL;
-//}
-
-void Eluna::Initialize()
-{
-    GEluna = new Eluna(NULL);
-}
-
-void Eluna::Uninitialize()
-{
-    delete GEluna;
-}
-
-Eluna::Eluna(Map* _map):
-GMap(_map),
-L(luaL_newstate()),
-PacketEventBindings(*this),
-ServerEventBindings(*this),
-PlayerEventBindings(*this),
-GuildEventBindings(*this),
-GroupEventBindings(*this),
-VehicleEventBindings(*this),
-
-CreatureEventBindings(*this),
-CreatureGossipBindings(*this),
-GameObjectEventBindings(*this),
-GameObjectGossipBindings(*this),
-ItemEventBindings(*this),
-ItemGossipBindings(*this),
-playerGossipBindings(*this)
-{
-    ELUNA_LOG_DEBUG("[Eluna]: Creating new lua state");
-    uint32 oldMSTime = getMSTime();
-    ElunaMap.Insert(L, this);
-    luaL_openlibs(L);
-    RegisterFunctions();
-
-    ScriptPaths scripts;
-    Eluna::GetScripts("lua_scripts", scripts);
-    Eluna::GetScripts("lua_scripts/extensions", scripts);
-    Eluna::RunScripts(scripts);
-    ELUNA_LOG_DEBUG("[Eluna]: Loaded %u Lua scripts in %u ms", scripts.size(), GetMSTimeDiffToNow(oldMSTime));
-
-    /*
-    if (restart)
-    {
-    //! Iterate over every supported source type (creature and gameobject)
-    //! Not entirely sure how this will affect units in non-loaded grids.
-    {
-    HashMapHolder<Creature>::ReadGuard g(HashMapHolder<Creature>::GetLock());
-    HashMapHolder<Creature>::MapType& m = HashMapHolder<Creature>::GetContainer();
-    for (HashMapHolder<Creature>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
-    {
-    if (itr->second->IsInWorld()) // must check?
-    // if(Eluna::CreatureEventBindings->GetBindMap(iter->second->GetEntry())) // update all AI or just Eluna?
-    itr->second->AIM_Initialize();
-    }
-    }
-
-    {
-    HashMapHolder<GameObject>::ReadGuard g(HashMapHolder<GameObject>::GetLock());
-    HashMapHolder<GameObject>::MapType& m = HashMapHolder<GameObject>::GetContainer();
-    for (HashMapHolder<GameObject>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
-    {
-    if (itr->second->IsInWorld()) // must check?
-    // if(Eluna::GameObjectEventBindings->GetBindMap(iter->second->GetEntry())) // update all AI or just Eluna?
-    itr->second->AIM_Initialize();
-    }
-    }
-    }
-    */
-}
-
-Eluna::~Eluna()
-{
-    ELUNA_LOG_DEBUG("[Eluna]: Closing lua state");
-    OnCloseLua();
-
-    ElunaMap.Remove(L);
-
-    // Unregisters and stops all timed events
-    m_EventMgr.RemoveEvents();
-
-    // Remove bindings
-    PacketEventBindings.Clear();
-    ServerEventBindings.Clear();
-    PlayerEventBindings.Clear();
-    GuildEventBindings.Clear();
-    GroupEventBindings.Clear();
-
-    CreatureEventBindings.Clear();
-    CreatureGossipBindings.Clear();
-    GameObjectEventBindings.Clear();
-    GameObjectGossipBindings.Clear();
-    ItemEventBindings.Clear();
-    ItemGossipBindings.Clear();
-    playerGossipBindings.Clear();
-    VehicleEventBindings.Clear();
-
-    lua_close(L);
-}
-
-// Start or restart eluna. Returns true if started
-//bool StartEluna_OBSOLETE()
-//{
-//#ifndef ELUNA
-//#ifndef MANGOS
-//    {
-//        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please enable in cmake)");
-//        return false;
-//    }
-//#endif
-//#endif
-//
-//    //ELUNA_GUARD();
-//    //bool restart = false;
-//    //if (eluna.L)
-//    //{
-//    //    restart = true;
-//    //    Eluna::OnEngineRestart();
-//
-//    //}
-//    //else
-//    //    AddElunaScripts();
-//
-//#ifdef MANGOS
-//    // Check config file for eluna is enabled or disabled
-//    if (!sWorld->getConfig(CONFIG_BOOL_ELUNA_ENABLED))
-//    {
-//        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please set config in 'mangosd.conf')");
-//        return false;
-//    }
-//#endif
-//
-//    return true;
-//}
-
-void Eluna::ReloadLuaStates()
-{
-    ELUNA_LOG_INFO("Reloading Lua states...");
-    uint32 oldMSTime = getMSTime();
-    std::vector<Map*> reloaded_maps;
-    Eluna::ElunaMapData::MapType& states = ElunaMap.GetContainer();
-    Eluna::ElunaMapData::MapType::const_iterator it;
-    // Delete old states and store maps that had states
-    while ((it = states.begin()) != states.end())
-    {
-        if (it->second->GMap) // skip global
-            reloaded_maps.push_back(it->second->GMap);
-        delete it->second;
-    }
-    // create global state
-    Eluna::GEluna = new Eluna(NULL);
-    // create new map states
-    for (std::vector<Map*>::const_iterator it = reloaded_maps.begin(); it != reloaded_maps.end(); ++it)
-        (*it)->luadata = new Eluna(*it);
-    ELUNA_LOG_INFO("Reloaded %u lua states in %u ms", reloaded_maps.size() + 1, GetMSTimeDiffToNow(oldMSTime));
-}
-
-// Finds lua script files from given path (including subdirectories) and pushes them to scripts
-void Eluna::GetScripts(std::string path, ScriptPaths& scripts)
-{
-    ELUNA_LOG_DEBUG("Eluna::GetScripts from path `%s`", path.c_str());
-
-    ACE_Dirent dir;
-    if (dir.open(path.c_str()) == -1)
-    {
-        ELUNA_LOG_ERROR("[Eluna]: Error No `%s` directory found, creating it", path.c_str());
-        ACE_OS::mkdir(path.c_str());
-        return;
-    }
-
-    ACE_DIRENT *directory = 0;
-    while (directory = dir.read())
-    {
-        // Skip the ".." and "." files.
-        if (ACE::isdotdir(directory->d_name))
-            continue;
-
-        std::string fullpath = path + "\\" + directory->d_name;
-
-        ACE_stat stat_buf;
-        if (ACE_OS::lstat(fullpath.c_str(), &stat_buf) == -1)
-            continue;
-
-        // load subfolder
-        if ((stat_buf.st_mode & S_IFMT) == (S_IFDIR))
-        {
-            GetScripts(fullpath, scripts);
-            continue;
-        }
-
-        // was file, check extension
-        ELUNA_LOG_DEBUG("[Eluna]: GetScripts Checking file `%s`", fullpath.c_str());
-        std::string ext = fullpath.substr(fullpath.length() - 4, 4);
-        if (ext != ".lua" && ext != ".dll")
-            continue;
-
-        // was correct, add path to scripts to load
-        ELUNA_LOG_DEBUG("[Eluna]: GetScripts add path `%s`", fullpath.c_str());
-        scripts.erase(fullpath);
-        scripts.insert(fullpath);
-    }
-}
-
-void Eluna::RunScripts(ScriptPaths& scripts)
-{
-    // load last first to load extensions first
-    for (ScriptPaths::const_reverse_iterator it = scripts.rbegin(); it != scripts.rend();)
-    {
-        if (!luaL_loadfile(L, it->c_str()) && !lua_pcall(L, 0, 0, 0))
-        {
-            // successfully loaded and ran file
-            ELUNA_LOG_DEBUG("[Eluna]: Successfully loaded `%s` on map %u", it->c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
-            ++it;
-            continue;
-        }
-        ELUNA_LOG_ERROR("[Eluna]: Error loading file `%s` on map %u", it->c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
-        report(L);
-        scripts.erase(*it);
-    }
-}
-
-void Eluna::report(lua_State* L)
-{
-    const char* msg = lua_tostring(L, -1);
-    while (msg)
-    {
-        lua_pop(L, -1);
-        ELUNA_LOG_ERROR("%s", msg);
-        msg = lua_tostring(L, -1);
-    }
-}
-
-void Eluna::BeginCall(int fReference)
-{
-    lua_settop(L, 0); // stack should be empty
-    lua_rawgeti(L, LUA_REGISTRYINDEX, (fReference));
-}
-
-bool Eluna::ExecuteCall(int params, int res)
-{
-    bool ret = true;
-    int top = lua_gettop(L);
-
-    if (lua_type(L, top - params) == LUA_TFUNCTION) // is function
-    {
-        if (lua_pcall(L, params, res, 0))
-        {
-            report(L);
-            ret = false;
-        }
-    }
-    else
-    {
-        ret = false;
-        if (params > 0)
-        {
-            for (int i = top; i >= (top - params); i--)
-            {
-                if (!lua_isnone(L, i))
-                    lua_remove(L, i);
-            }
-        }
-    }
-    return ret;
-}
-
-void Eluna::EndCall(int res)
-{
-    for (int i = res; i > 0; i--)
-    {
-        if (!lua_isnone(L, res))
-            lua_remove(L, res);
-    }
-}
+LoadedScripts Eluna::script_extensions;
+LoadedScripts Eluna::script_global;
+LoadedScripts Eluna::script_world;
+LoadedScripts Eluna::script_map;
 
 void Eluna::Push(lua_State* L)
 {
@@ -646,6 +329,376 @@ template<> Corpse* Eluna::CHECKOBJ<Corpse>(lua_State* L, int narg, bool error)
     TEST_OBJ(Corpse, obj, error, ToCorpse);
 }
 #undef TEST_OBJ
+
+void StateMsg::Data::Push(lua_State* L) const
+{
+    switch (_type)
+    {
+    default:
+    case TYPE_NIL:
+        Eluna::Push(L);
+        break;
+    case TYPE_BOOL:
+        Eluna::Push(L, _bool);
+        break;
+    case TYPE_STRING:
+        Eluna::Push(L, _str);
+        break;
+    case TYPE_NUMBER:
+        Eluna::Push(L, _num);
+        break;
+    }
+};
+
+Eluna* StateMsg::GetTarget() const
+{
+    if (t_mapid == MAPID_INVALID)
+        return Eluna::GEluna;
+    if (Map* map = sMapMgr->FindMap(t_mapid, t_instanceid))
+        return map->GetEluna();
+    return NULL;
+}
+
+void StateMsg::Push(lua_State* L) const
+{
+    for (MsgData::const_iterator it = msgs.begin(); it != msgs.end(); ++it)
+        it->Push(L);
+}
+
+Eluna* Eluna::GetEluna(lua_State* L)
+{
+    return ElunaMap.Find(L);
+}
+
+// Loads the scripts from given path and pushes them to scripts
+static void LoadLuaScripts(lua_State* L, std::string path, std::string folder, LoadedScripts& scripts)
+{
+    ELUNA_LOG_DEBUG("[Eluna]: LoadLuaScripts `%s`, `%s`", path.c_str(), folder.c_str());
+    scripts.clear();
+    // LoadedScripts scripts;
+    Eluna::CreateDir(path, folder);
+    Eluna::GetScripts(path, folder, scripts);
+}
+
+void Eluna::Initialize()
+{
+    ELUNA_LOG_INFO("[Eluna]: Getting script paths...");
+    static const std::string path = "lua_scripts"; // for config setting in the future
+    uint32 oldMSTime = getMSTime();
+    CreateDir("", path);
+    lua_State* L = luaL_newstate();
+    LoadLuaScripts(L, path, "extensions", script_extensions);
+    LoadLuaScripts(L, path, "global", script_global);
+    LoadLuaScripts(L, path, "world", script_world);
+    LoadLuaScripts(L, path, "map", script_map);
+    lua_close(L);
+    uint32 size = script_extensions.size() + script_global.size() + script_world.size() + script_map.size();
+    ELUNA_LOG_INFO("[Eluna]: Found %u Lua scripts in %u ms", size, GetMSTimeDiffToNow(oldMSTime));
+
+    GEluna = new Eluna(NULL);
+}
+
+void Eluna::Uninitialize()
+{
+    delete GEluna;
+}
+
+Eluna::Eluna(Map* _map):
+GMap(_map),
+L(luaL_newstate()),
+PacketEventBindings(*this),
+ServerEventBindings(*this),
+PlayerEventBindings(*this),
+GuildEventBindings(*this),
+GroupEventBindings(*this),
+VehicleEventBindings(*this),
+
+CreatureEventBindings(*this),
+CreatureGossipBindings(*this),
+GameObjectEventBindings(*this),
+GameObjectGossipBindings(*this),
+ItemEventBindings(*this),
+ItemGossipBindings(*this),
+playerGossipBindings(*this)
+{
+    ELUNA_LOG_DEBUG("[Eluna]: Creating new lua state");
+    uint32 oldMSTime = getMSTime();
+    ElunaMap.Insert(L, this);
+    luaL_openlibs(L);
+    RegisterFunctions();
+
+    RunScripts(script_extensions);
+    RunScripts(script_global);
+    if(GMap)
+        RunScripts(script_map);
+    else
+        RunScripts(script_world);
+    ELUNA_LOG_DEBUG("[Eluna]: Loaded lua scripts in %u ms", GetMSTimeDiffToNow(oldMSTime));
+
+    /*
+    if (restart)
+    {
+    //! Iterate over every supported source type (creature and gameobject)
+    //! Not entirely sure how this will affect units in non-loaded grids.
+    {
+    HashMapHolder<Creature>::ReadGuard g(HashMapHolder<Creature>::GetLock());
+    HashMapHolder<Creature>::MapType& m = HashMapHolder<Creature>::GetContainer();
+    for (HashMapHolder<Creature>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
+    {
+    if (itr->second->IsInWorld()) // must check?
+    // if(Eluna::CreatureEventBindings->GetBindMap(iter->second->GetEntry())) // update all AI or just Eluna?
+    itr->second->AIM_Initialize();
+    }
+    }
+
+    {
+    HashMapHolder<GameObject>::ReadGuard g(HashMapHolder<GameObject>::GetLock());
+    HashMapHolder<GameObject>::MapType& m = HashMapHolder<GameObject>::GetContainer();
+    for (HashMapHolder<GameObject>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
+    {
+    if (itr->second->IsInWorld()) // must check?
+    // if(Eluna::GameObjectEventBindings->GetBindMap(iter->second->GetEntry())) // update all AI or just Eluna?
+    itr->second->AIM_Initialize();
+    }
+    }
+    }
+    */
+}
+
+Eluna::~Eluna()
+{
+    ELUNA_LOG_DEBUG("[Eluna]: Closing lua state");
+    OnCloseLua();
+
+    ElunaMap.Remove(L);
+
+    // Unregisters and stops all timed events
+    m_EventMgr.RemoveEvents();
+
+    // Remove bindings
+    PacketEventBindings.Clear();
+    ServerEventBindings.Clear();
+    PlayerEventBindings.Clear();
+    GuildEventBindings.Clear();
+    GroupEventBindings.Clear();
+
+    CreatureEventBindings.Clear();
+    CreatureGossipBindings.Clear();
+    GameObjectEventBindings.Clear();
+    GameObjectGossipBindings.Clear();
+    ItemEventBindings.Clear();
+    ItemGossipBindings.Clear();
+    playerGossipBindings.Clear();
+    VehicleEventBindings.Clear();
+
+    lua_close(L);
+}
+
+// Start or restart eluna. Returns true if started
+//bool StartEluna_OBSOLETE()
+//{
+//#ifndef ELUNA
+//#ifndef MANGOS
+//    {
+//        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please enable in cmake)");
+//        return false;
+//    }
+//#endif
+//#endif
+//
+//    //ELUNA_GUARD();
+//    //bool restart = false;
+//    //if (eluna.L)
+//    //{
+//    //    restart = true;
+//    //    Eluna::OnEngineRestart();
+//
+//    //}
+//    //else
+//    //    AddElunaScripts();
+//
+//#ifdef MANGOS
+//    // Check config file for eluna is enabled or disabled
+//    if (!sWorld->getConfig(CONFIG_BOOL_ELUNA_ENABLED))
+//    {
+//        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please set config in 'mangosd.conf')");
+//        return false;
+//    }
+//#endif
+//
+//    return true;
+//}
+
+void Eluna::ReloadLuaStates()
+{
+    ELUNA_LOG_INFO("Reloading Lua states...");
+    uint32 oldMSTime = getMSTime();
+    // Delete global state
+    Uninitialize();
+    std::vector<Map*> reloaded_maps;
+    Eluna::ElunaMapData::MapType& states = ElunaMap.GetContainer();
+    Eluna::ElunaMapData::MapType::const_iterator it;
+    // Delete old states and store maps that had states
+    while ((it = states.begin()) != states.end())
+    {
+        if (it->second->GMap) // skip global
+            reloaded_maps.push_back(it->second->GMap);
+        delete it->second;
+    }
+    // reload scripts and create global state
+    Initialize();
+    // create new map states
+    for (std::vector<Map*>::const_iterator it = reloaded_maps.begin(); it != reloaded_maps.end(); ++it)
+        (*it)->luadata = new Eluna(*it);
+    ELUNA_LOG_INFO("Reloaded %u lua states in %u ms", reloaded_maps.size() + 1, GetMSTimeDiffToNow(oldMSTime));
+}
+
+void Eluna::CreateDir(std::string path, std::string name)
+{
+    if (!path.empty())
+        path += "/";
+    path += name;
+    ELUNA_LOG_DEBUG("[Eluna]: CreateDir `%s`", path.c_str());
+    ACE_Dirent dir;
+    if (dir.open(path.c_str()) == -1)
+    {
+        ELUNA_LOG_ERROR("[Eluna]: Error No `%s` directory found, creating it", path.c_str());
+        ACE_OS::mkdir(path.c_str());
+        return;
+    }
+}
+
+// Finds lua script files from given path (including subdirectories) and pushes them to scripts
+void Eluna::GetScripts(std::string path, std::string folder, LoadedScripts& scripts)
+{
+    if (!path.empty())
+        path += "/";
+    path += folder;
+    ELUNA_LOG_DEBUG("[Eluna]: GetScripts from path `%s`", path.c_str());
+
+    ACE_Dirent dir;
+    if (dir.open(path.c_str()) == -1)
+    {
+        ELUNA_LOG_ERROR("[Eluna]: Error No `%s` directory found", path.c_str());
+        return;
+    }
+
+    ACE_DIRENT *directory = 0;
+    while (directory = dir.read())
+    {
+        // Skip the ".." and "." files.
+        if (ACE::isdotdir(directory->d_name))
+            continue;
+
+        std::string fullpath = path + "/" + directory->d_name;
+
+        ACE_stat stat_buf;
+        if (ACE_OS::lstat(fullpath.c_str(), &stat_buf) == -1)
+            continue;
+
+        // load subfolder
+        if ((stat_buf.st_mode & S_IFMT) == (S_IFDIR))
+        {
+            GetScripts(path, directory->d_name, scripts);
+            continue;
+        }
+
+        // was file, check extension
+        ELUNA_LOG_DEBUG("[Eluna]: GetScripts Checking file `%s`", fullpath.c_str());
+        std::string ext = fullpath.substr(fullpath.length() - 4, 4);
+        if (ext != ".lua" && ext != ".dll")
+            continue;
+
+        // was correct, load script to memory
+        ELUNA_LOG_DEBUG("[Eluna]: GetScripts read file `%s`", fullpath.c_str());
+        ACE_HANDLE handle = ACE_OS::open(fullpath.c_str(), O_RDWR);
+        if (!handle)
+        {
+            ELUNA_LOG_ERROR("[Eluna]: GetScripts couldnt read file `%s`", fullpath.c_str());
+            continue;
+        }
+
+        // load chuncks of code to buffer and append it to scripts for the filepath
+        char buf[1024];
+        ssize_t length = 0;
+        while (length = ACE_OS::read(handle, buf, sizeof(buf)-1))
+        {
+            buf[length] = 0;
+            scripts[fullpath] += buf;
+        }
+        ACE_OS::close(handle);
+    }
+}
+
+void Eluna::RunScripts(LoadedScripts& scripts)
+{
+    // load last first to load extensions first
+    for (LoadedScripts::const_iterator it = scripts.begin(); it != scripts.end(); ++it)
+    {
+        if (!luaL_dostring(L, it->second.c_str()))
+        {
+            // successfully loaded and ran file
+            ELUNA_LOG_DEBUG("[Eluna]: Successfully loaded `%s` on map %u", it->first.c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
+            continue;
+        }
+        ELUNA_LOG_ERROR("[Eluna]: Error loading file `%s` on map %u", it->first.c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
+        report(L);
+    }
+}
+
+void Eluna::report(lua_State* L)
+{
+    const char* msg = lua_tostring(L, -1);
+    while (msg)
+    {
+        lua_pop(L, -1);
+        ELUNA_LOG_ERROR("%s", msg);
+        msg = lua_tostring(L, -1);
+    }
+}
+
+void Eluna::BeginCall(int fReference)
+{
+    lua_settop(L, 0); // stack should be empty
+    lua_rawgeti(L, LUA_REGISTRYINDEX, (fReference));
+}
+
+bool Eluna::ExecuteCall(int params, int res)
+{
+    bool ret = true;
+    int top = lua_gettop(L);
+
+    if (lua_type(L, top - params) == LUA_TFUNCTION) // is function
+    {
+        if (lua_pcall(L, params, res, 0))
+        {
+            report(L);
+            ret = false;
+        }
+    }
+    else
+    {
+        ret = false;
+        if (params > 0)
+        {
+            for (int i = top; i >= (top - params); i--)
+            {
+                if (!lua_isnone(L, i))
+                    lua_remove(L, i);
+            }
+        }
+    }
+    return ret;
+}
+
+void Eluna::EndCall(int res)
+{
+    for (int i = res; i > 0; i--)
+    {
+        if (!lua_isnone(L, res))
+            lua_remove(L, res);
+    }
+}
 
 // Saves the function reference ID given to the register type's store for given entry under the given event
 void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)

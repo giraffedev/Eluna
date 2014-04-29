@@ -137,20 +137,18 @@ if( WIN32 )
   if ( MSVC )
     add_custom_command(TARGET LuaEngine
       POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/lua_scripts/extensions/
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/extensions ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/lua_scripts/extensions/
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lua_scripts ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/lua_scripts/
     )
   elseif ( MINGW )
     add_custom_command(TARGET LuaEngine
       POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin/lua_scripts/extensions/
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/extensions ${CMAKE_BINARY_DIR}/bin/lua_scripts/extensions/
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lua_scripts ${CMAKE_BINARY_DIR}/bin/lua_scripts/
     )
   endif()
 endif()
 
 if( UNIX )
-  install(DIRECTORY extensions DESTINATION bin/lua_scripts/)
+  install(DIRECTORY lua_scripts DESTINATION bin)
 elseif( WIN32 )
-  install(DIRECTORY extensions DESTINATION "${CMAKE_INSTALL_PREFIX}/lua_scripts/")
+  install(DIRECTORY lua_scripts DESTINATION "${CMAKE_INSTALL_PREFIX}")
 endif()

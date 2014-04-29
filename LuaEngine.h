@@ -78,7 +78,8 @@ typedef VehicleInfo Vehicle;
 #endif
 #endif
 
-typedef std::set<std::string> ScriptPaths;
+// path, script
+typedef std::map<std::string, std::string> LoadedScripts;
 
 #ifdef MANGOS
 #undef  sWorld
@@ -565,6 +566,12 @@ private:
 
     static ACE_Based::LockedQueue<StateMsg*, ACE_Thread_Mutex> StateMsgQue;
 
+    // script stores
+    static LoadedScripts script_extensions;
+    static LoadedScripts script_global;
+    static LoadedScripts script_world;
+    static LoadedScripts script_map;
+
     // Used to start global lua state. MUST be used before ANY hook is triggered.
     static void Initialize();
     // Used to stop global lua state. Should be after all maps unload and after shutdown hook
@@ -579,7 +586,6 @@ public:
 
     static Eluna* GEluna; // NOTE! only use for threadunsafe hooks (world update)
     static Eluna* GetEluna(lua_State* L); // Using lock for thread safety, use seldom
-    //static Eluna* GetEluna(Map* map);
 
     // Use templates for EventBind
     EventBind PacketEventBindings;
@@ -603,8 +609,9 @@ public:
     static void report(lua_State* L);
     void RegisterGlobals();
     void RegisterFunctions();
-    void GetScripts(std::string path, ScriptPaths& scripts);
-    void RunScripts(ScriptPaths& scripts);
+    static void CreateDir(std::string path, std::string name);
+    static void GetScripts(std::string path, std::string folder, LoadedScripts& scripts);
+    void RunScripts(LoadedScripts& scripts);
     void Register(uint8 reg, uint32 id, uint32 evt, int func);
     void BeginCall(int fReference);
     bool ExecuteCall(int params, int res);

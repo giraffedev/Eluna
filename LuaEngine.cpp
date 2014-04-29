@@ -371,29 +371,26 @@ Eluna* Eluna::GetEluna(lua_State* L)
 }
 
 // Loads the scripts from given path and pushes them to scripts
-static void LoadLuaScripts(lua_State* L, std::string path, std::string folder, LoadedScripts& scripts)
+static void LoadLuaScripts(std::string path, std::string folder, LoadedScripts& scripts)
 {
     ELUNA_LOG_DEBUG("[Eluna]: LoadLuaScripts `%s`, `%s`", path.c_str(), folder.c_str());
     scripts.clear();
-    // LoadedScripts scripts;
     Eluna::CreateDir(path, folder);
     Eluna::GetScripts(path, folder, scripts);
 }
 
 void Eluna::Initialize()
 {
-    ELUNA_LOG_INFO("[Eluna]: Getting script paths...");
+    ELUNA_LOG_INFO("[Eluna]: Initialize...");
     static const std::string path = "lua_scripts"; // for config setting in the future
     uint32 oldMSTime = getMSTime();
     CreateDir("", path);
-    lua_State* L = luaL_newstate();
-    LoadLuaScripts(L, path, "extensions", script_extensions);
-    LoadLuaScripts(L, path, "global", script_global);
-    LoadLuaScripts(L, path, "world", script_world);
-    LoadLuaScripts(L, path, "map", script_map);
-    lua_close(L);
+    LoadLuaScripts(path, "extensions", script_extensions);
+    LoadLuaScripts(path, "global", script_global);
+    LoadLuaScripts(path, "world", script_world);
+    LoadLuaScripts(path, "map", script_map);
     uint32 size = script_extensions.size() + script_global.size() + script_world.size() + script_map.size();
-    ELUNA_LOG_INFO("[Eluna]: Found %u Lua scripts in %u ms", size, GetMSTimeDiffToNow(oldMSTime));
+    ELUNA_LOG_INFO("[Eluna]: Loaded %u Lua scripts in %u ms", size, GetMSTimeDiffToNow(oldMSTime));
 
     GEluna = new Eluna(NULL);
 }
@@ -550,7 +547,7 @@ void Eluna::ReloadLuaStates()
     // create new map states
     for (std::vector<Map*>::const_iterator it = reloaded_maps.begin(); it != reloaded_maps.end(); ++it)
         (*it)->luadata = new Eluna(*it);
-    ELUNA_LOG_INFO("Reloaded %u lua states in %u ms", reloaded_maps.size() + 1, GetMSTimeDiffToNow(oldMSTime));
+    ELUNA_LOG_INFO("Reloaded %u lua states in %u ms", states.size(), GetMSTimeDiffToNow(oldMSTime));
 }
 
 void Eluna::CreateDir(std::string path, std::string name)
@@ -621,10 +618,11 @@ void Eluna::GetScripts(std::string path, std::string folder, LoadedScripts& scri
         // load chuncks of code to buffer and append it to scripts for the filepath
         char buf[1024];
         ssize_t length = 0;
+        std::string luaname = "@" + fullpath;
         while (length = ACE_OS::read(handle, buf, sizeof(buf)-1))
         {
             buf[length] = 0;
-            scripts[fullpath] += buf;
+            scripts[luaname] += buf;
         }
         ACE_OS::close(handle);
     }
@@ -632,16 +630,13 @@ void Eluna::GetScripts(std::string path, std::string folder, LoadedScripts& scri
 
 void Eluna::RunScripts(LoadedScripts& scripts)
 {
+    ELUNA_LOG_DEBUG("[Eluna]: RunScripts on map %u", GMap ? GMap->GetId() : MAPID_INVALID);
     // load last first to load extensions first
     for (LoadedScripts::const_iterator it = scripts.begin(); it != scripts.end(); ++it)
     {
-        if (!luaL_dostring(L, it->second.c_str()))
-        {
-            // successfully loaded and ran file
-            ELUNA_LOG_DEBUG("[Eluna]: Successfully loaded `%s` on map %u", it->first.c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
+        if (!luaL_loadbuffer(L, it->second.c_str(), it->second.length(), it->first.c_str()) && !lua_pcall(L, 0, 0, 0))
             continue;
-        }
-        ELUNA_LOG_ERROR("[Eluna]: Error loading file `%s` on map %u", it->first.c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
+        ELUNA_LOG_ERROR("[Eluna]: Error loading file `%s` on map %u", it->first.substr(1, std::string::npos).c_str(), GMap ? GMap->GetId() : MAPID_INVALID);
         report(L);
     }
 }

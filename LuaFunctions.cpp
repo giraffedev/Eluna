@@ -32,10 +32,10 @@ ElunaFunctions GlobalFunctions[] =
 {
     // Hooks
     { ENV_GLOBAL, "RegisterServerEvent", &LuaGlobalFunctions::RegisterServerEvent },                       // RegisterServerEvent(event, function)
-    { ENV_GLOBAL, "RegisterPacketEvent", &LuaGlobalFunctions::RegisterPacketEvent },                       // RegisterPacketEvent(opcodeID, function)
+    { ENV_WORLD, "RegisterPacketEvent", &LuaGlobalFunctions::RegisterPacketEvent },                       // RegisterPacketEvent(opcodeID, function)
     { ENV_GLOBAL, "RegisterPlayerEvent", &LuaGlobalFunctions::RegisterPlayerEvent },                       // RegisterPlayerEvent(event, function)
-    { ENV_GLOBAL, "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent },                         // RegisterGuildEvent(event, function)
-    { ENV_GLOBAL, "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent },                         // RegisterGroupEvent(event, function)
+    { ENV_WORLD, "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent },                         // RegisterGuildEvent(event, function)
+    { ENV_WORLD, "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent },                         // RegisterGroupEvent(event, function)
     { ENV_MAP, "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent },                      // RegisterCreatureEvent(entry, event, function)
     { ENV_MAP, "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent },                  // RegisterGameObjectEvent(entry, event, function)
     { ENV_MAP, "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent },                              // RegisterItemEvent(entry, event, function)

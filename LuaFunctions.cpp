@@ -1187,6 +1187,13 @@ ElunaMethods<AuctionHouseObject> AuctionMethods[] =
     { ENV_NONE, NULL, NULL }
 };
 
+template<typename T> const char* ElunaTemplate<T>::tname = NULL;
+template<typename T> bool ElunaTemplate<T>::manageMemory = false;
+#if (!defined(TBC) && !defined(CLASSIC))
+// fix compile error about accessing vehicle destructor
+template<> int ElunaTemplate<Vehicle>::gcT(lua_State* L) { return 0; }
+#endif
+
 template<typename T> template<typename C>
 void ElunaTemplate<T>::SetMethods(Eluna* E, ElunaMethods<C>* methodTable)
 {

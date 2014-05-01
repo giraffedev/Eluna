@@ -347,7 +347,6 @@ public:
         return 1;
     }
 };
-template<typename T> template<typename C> void ElunaTemplate<T>::SetMethods(Eluna* E, ElunaMethods<C>* methodTable);
 template<typename T> const char* ElunaTemplate<T>::tname = NULL;
 template<typename T> bool ElunaTemplate<T>::manageMemory = false;
 #if (!defined(TBC) && !defined(CLASSIC))

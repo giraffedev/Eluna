@@ -151,9 +151,9 @@ typedef ThreatContainer::StorageType ThreatList;
 enum ElunaEnvironments
 {
     ENV_NONE,
-    ENV_MAP,
-    ENV_WORLD,
-    ENV_GLOBAL,
+    ENV_MAP,    // For current map only
+    ENV_WORLD,  // For world state only
+    ENV_GLOBAL, // For world and map
     ENV_MAX
 };
 
@@ -277,29 +277,7 @@ public:
     }
 
     template<typename C>
-    static void SetMethods(Eluna* E, ElunaMethods<C>* methodTable)
-    {
-        if (!lua_istable(E->L, 1))
-            return;
-        lua_pushstring(E->L, "GetObjectType");
-        lua_pushcclosure(E->L, type, 0);
-        lua_settable(E->L, 1);
-        if (!methodTable)
-            return;
-        for (; methodTable->name; ++methodTable)
-        {
-            if (methodTable->env == ENV_MAP && !E->GMap)
-                continue;
-            else if (methodTable->env == ENV_WORLD && E->GMap)
-                continue;
-            else
-                ASSERT(methodTable->env == ENV_GLOBAL);
-            lua_pushstring(E->L, methodTable->name);
-            lua_pushlightuserdata(E->L, (void*)methodTable);
-            lua_pushcclosure(E->L, thunk, 1);
-            lua_settable(E->L, 1);
-        }
-    }
+    static void SetMethods(Eluna* E, ElunaMethods<C>* methodTable);
 
     static int push(lua_State* L, T const* obj)
     {
@@ -369,6 +347,7 @@ public:
         return 1;
     }
 };
+template<typename T> template<typename C> void ElunaTemplate<T>::SetMethods(Eluna* E, ElunaMethods<C>* methodTable);
 template<typename T> const char* ElunaTemplate<T>::tname = NULL;
 template<typename T> bool ElunaTemplate<T>::manageMemory = false;
 #if (!defined(TBC) && !defined(CLASSIC))
@@ -379,10 +358,12 @@ template<> int ElunaTemplate<Vehicle>::gcT(lua_State* L) { return 0; }
 struct EventBind
 {
     typedef std::vector<int> ElunaBindingMap;
-    typedef std::map<int, ElunaBindingMap> ElunaEntryMap;
+    typedef UNORDERED_MAP<int, ElunaBindingMap> ElunaEntryMap;
     Eluna& eluna;
 
-    EventBind(Eluna& _eluna): eluna(_eluna) {}
+    EventBind(Eluna& _eluna): eluna(_eluna)
+    {
+    }
     ~EventBind() { Clear(); }
 
     void Clear(); // unregisters all registered functions and clears all registered events from the bind std::maps (reset)
@@ -407,10 +388,12 @@ struct EventBind
 struct EntryBind
 {
     typedef std::map<int, int> ElunaBindingMap;
-    typedef std::map<uint32, ElunaBindingMap> ElunaEntryMap;
+    typedef UNORDERED_MAP<uint32, ElunaBindingMap> ElunaEntryMap;
     Eluna& eluna;
 
-    EntryBind(Eluna& _eluna): eluna(_eluna) {}
+    EntryBind(Eluna& _eluna): eluna(_eluna)
+    {
+    }
     ~EntryBind() { Clear(); }
 
     void Clear(); // unregisters all registered functions and clears all registered events from the bind std::maps (reset)
@@ -588,18 +571,19 @@ public:
     static Eluna* GetEluna(lua_State* L); // Using lock for thread safety, use seldom
 
     // Use templates for EventBind
-    EventBind PacketEventBindings;
+    EventBind GlobalEventBindings;
     EventBind ServerEventBindings;
-    EventBind PlayerEventBindings;
+    EventBind PacketEventBindings;
     EventBind GuildEventBindings;
     EventBind GroupEventBindings;
-    EventBind VehicleEventBindings;
+    EventBind MapEventBindings;
+    EventBind PlayerEventBindings;
 
     EntryBind CreatureEventBindings;
-    EntryBind CreatureGossipBindings;
     EntryBind GameObjectEventBindings;
-    EntryBind GameObjectGossipBindings;
     EntryBind ItemEventBindings;
+    EntryBind CreatureGossipBindings;
+    EntryBind GameObjectGossipBindings;
     EntryBind ItemGossipBindings;
     EntryBind playerGossipBindings;
 
@@ -707,9 +691,6 @@ public:
     void OnRepop(Player* pPlayer);
     void OnResurrect(Player* pPlayer);
     void OnQuestAbandon(Player* pPlayer, uint32 questId);
-    void OnGmTicketCreate(Player* pPlayer, std::string& ticketText);
-    void OnGmTicketUpdate(Player* pPlayer, std::string& ticketText);
-    void OnGmTicketDelete(Player* pPlayer);
     InventoryResult OnCanUseItem(const Player* pPlayer, uint32 itemEntry);
     void OnCloseLua();
     bool OnAddonMessage(Player* sender, uint32 type, std::string& msg, Player* receiver, Guild* guild, Group* group, Channel* channel);
@@ -870,11 +851,11 @@ public:
     void OnCreate(Group* group, uint64 leaderGuid, GroupType groupType);
 
     /* Map */
-    void OnCreate(Map* map);
-    void OnDestroy(Map* map);
+    void OnCreate();
+    void OnDestroy();
     void OnPlayerEnter(Map* map, Player* player);
     void OnPlayerLeave(Map* map, Player* player);
-    void OnUpdate(Map* map, uint32 diff);
+    void OnUpdate(uint32 diff);
 };
 template<> Unit* Eluna::CHECKOBJ<Unit>(lua_State* L, int narg, bool error);
 template<> Player* Eluna::CHECKOBJ<Player>(lua_State* L, int narg, bool error);

@@ -403,18 +403,19 @@ void Eluna::Uninitialize()
 Eluna::Eluna(Map* _map):
 GMap(_map),
 L(luaL_newstate()),
-PacketEventBindings(*this),
+GlobalEventBindings(*this),
 ServerEventBindings(*this),
-PlayerEventBindings(*this),
+PacketEventBindings(*this),
 GuildEventBindings(*this),
 GroupEventBindings(*this),
-VehicleEventBindings(*this),
+MapEventBindings(*this),
+PlayerEventBindings(*this),
 
 CreatureEventBindings(*this),
-CreatureGossipBindings(*this),
 GameObjectEventBindings(*this),
-GameObjectGossipBindings(*this),
 ItemEventBindings(*this),
+CreatureGossipBindings(*this),
+GameObjectGossipBindings(*this),
 ItemGossipBindings(*this),
 playerGossipBindings(*this)
 {
@@ -473,20 +474,21 @@ Eluna::~Eluna()
     m_EventMgr.RemoveEvents();
 
     // Remove bindings
-    PacketEventBindings.Clear();
+    GlobalEventBindings.Clear();
     ServerEventBindings.Clear();
-    PlayerEventBindings.Clear();
+    PacketEventBindings.Clear();
     GuildEventBindings.Clear();
     GroupEventBindings.Clear();
+    MapEventBindings.Clear();
+    PlayerEventBindings.Clear();
 
     CreatureEventBindings.Clear();
-    CreatureGossipBindings.Clear();
     GameObjectEventBindings.Clear();
-    GameObjectGossipBindings.Clear();
     ItemEventBindings.Clear();
+    CreatureGossipBindings.Clear();
+    GameObjectGossipBindings.Clear();
     ItemGossipBindings.Clear();
     playerGossipBindings.Clear();
-    VehicleEventBindings.Clear();
 
     lua_close(L);
 }
@@ -700,10 +702,10 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
 {
     switch (regtype)
     {
-    case REGTYPE_PACKET:
-        if (evt < NUM_MSG_TYPES)
+    case REGTYPE_GLOBAL:
+        if (evt < GLOBAL_EVENT_COUNT)
         {
-            PacketEventBindings.Insert(evt, functionRef);
+            GlobalEventBindings.Insert(evt, functionRef);
             return;
         }
         break;
@@ -716,10 +718,10 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
         }
         break;
 
-    case REGTYPE_PLAYER:
-        if (evt < PLAYER_EVENT_COUNT)
+    case REGTYPE_PACKET:
+        if (evt < NUM_MSG_TYPES)
         {
-            PlayerEventBindings.Insert(evt, functionRef);
+            PacketEventBindings.Insert(evt, functionRef);
             return;
         }
         break;
@@ -740,10 +742,18 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
         }
         break;
 
-    case REGTYPE_VEHICLE:
-        if (evt < VEHICLE_EVENT_COUNT)
+    case REGTYPE_MAP:
+        if (evt < MAP_EVENT_COUNT)
         {
-            VehicleEventBindings.Insert(evt, functionRef);
+            MapEventBindings.Insert(evt, functionRef);
+            return;
+        }
+        break;
+
+    case REGTYPE_PLAYER:
+        if (evt < PLAYER_EVENT_COUNT)
+        {
+            PlayerEventBindings.Insert(evt, functionRef);
             return;
         }
         break;
@@ -758,22 +768,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
                 return;
             }
 
-            Eluna::CreatureEventBindings.Insert(id, evt, functionRef);
-            return;
-        }
-        break;
-
-    case REGTYPE_CREATURE_GOSSIP:
-        if (evt < GOSSIP_EVENT_COUNT)
-        {
-            if (!sObjectMgr->GetCreatureTemplate(id))
-            {
-                luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
-                return;
-            }
-
-            Eluna::CreatureGossipBindings.Insert(id, evt, functionRef);
+            CreatureEventBindings.Insert(id, evt, functionRef);
             return;
         }
         break;
@@ -788,22 +783,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
                 return;
             }
 
-            Eluna::GameObjectEventBindings.Insert(id, evt, functionRef);
-            return;
-        }
-        break;
-
-    case REGTYPE_GAMEOBJECT_GOSSIP:
-        if (evt < GOSSIP_EVENT_COUNT)
-        {
-            if (!sObjectMgr->GetGameObjectTemplate(id))
-            {
-                luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", id);
-                return;
-            }
-
-            Eluna::GameObjectGossipBindings.Insert(id, evt, functionRef);
+            GameObjectEventBindings.Insert(id, evt, functionRef);
             return;
         }
         break;
@@ -818,7 +798,37 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
                 return;
             }
 
-            Eluna::ItemEventBindings.Insert(id, evt, functionRef);
+            ItemEventBindings.Insert(id, evt, functionRef);
+            return;
+        }
+        break;
+
+    case REGTYPE_CREATURE_GOSSIP:
+        if (evt < GOSSIP_EVENT_COUNT)
+        {
+            if (!sObjectMgr->GetCreatureTemplate(id))
+            {
+                luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
+                luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
+                return;
+            }
+
+            CreatureGossipBindings.Insert(id, evt, functionRef);
+            return;
+        }
+        break;
+
+    case REGTYPE_GAMEOBJECT_GOSSIP:
+        if (evt < GOSSIP_EVENT_COUNT)
+        {
+            if (!sObjectMgr->GetGameObjectTemplate(id))
+            {
+                luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
+                luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", id);
+                return;
+            }
+
+            GameObjectGossipBindings.Insert(id, evt, functionRef);
             return;
         }
         break;
@@ -833,7 +843,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
                 return;
             }
 
-            Eluna::ItemGossipBindings.Insert(id, evt, functionRef);
+            ItemGossipBindings.Insert(id, evt, functionRef);
             return;
         }
         break;
@@ -841,7 +851,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     case REGTYPE_PLAYER_GOSSIP:
         if (evt < GOSSIP_EVENT_COUNT)
         {
-            Eluna::playerGossipBindings.Insert(id, evt, functionRef);
+            playerGossipBindings.Insert(id, evt, functionRef);
             return;
         }
         break;

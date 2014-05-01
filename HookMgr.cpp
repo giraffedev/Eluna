@@ -10,33 +10,33 @@
 
 void Eluna::OnStateMessage(StateMsg* msg)
 {
-    if (!ServerEventBindings.HasEvents(ELUNA_EVENT_ON_STATE_MSG))
+    if (!GlobalEventBindings.HasEvents(ELUNA_EVENT_ON_STATE_MSG))
         return;
-    ServerEventBindings.BeginCall(ELUNA_EVENT_ON_STATE_MSG);
+    GlobalEventBindings.BeginCall(ELUNA_EVENT_ON_STATE_MSG);
     msg->Push(L);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    GlobalEventBindings.ExecuteCall();
+    GlobalEventBindings.EndCall();
 }
 
 void Eluna::OnCloseLua()
 {
-    if (!ServerEventBindings.HasEvents(ELUNA_EVENT_ON_LUA_STATE_CLOSE))
+    if (!GlobalEventBindings.HasEvents(ELUNA_EVENT_ON_LUA_STATE_CLOSE))
         return;
-    ServerEventBindings.BeginCall(ELUNA_EVENT_ON_LUA_STATE_CLOSE);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    GlobalEventBindings.BeginCall(ELUNA_EVENT_ON_LUA_STATE_CLOSE);
+    GlobalEventBindings.ExecuteCall();
+    GlobalEventBindings.EndCall();
 }
 
 // areatrigger
 bool Eluna::OnAreaTrigger(Player* pPlayer, AreaTriggerEntry const* pTrigger)
 {
-    if (!ServerEventBindings.HasEvents(TRIGGER_EVENT_ON_TRIGGER))
+    if (!MapEventBindings.HasEvents(MAP_EVENT_ON_AREATRIGGER))
         return false;
-    ServerEventBindings.BeginCall(TRIGGER_EVENT_ON_TRIGGER);
+    MapEventBindings.BeginCall(MAP_EVENT_ON_AREATRIGGER);
     Push(L, pPlayer);
     Push(L, pTrigger->id);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
     return false;
 }
 // weather
@@ -192,9 +192,9 @@ bool Eluna::OnPacketReceive(WorldSession* session, WorldPacket& packet)
 // AddOns
 bool Eluna::OnAddonMessage(Player* sender, uint32 type, std::string& msg, Player* receiver, Guild* guild, Group* group, Channel* channel)
 {
-    if (!ServerEventBindings.HasEvents(ADDON_EVENT_ON_MESSAGE))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_ADDON_MESSAGE))
         return false;
-    ServerEventBindings.BeginCall(ADDON_EVENT_ON_MESSAGE);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_ADDON_MESSAGE);
     Push(L, sender);
     Push(L, type);
     const char* c_msg = msg.c_str();
@@ -467,19 +467,19 @@ bool Eluna::OnCommand(Player* player, const char* text)
         }
     }
     bool result = true;
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_COMMAND))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_COMMAND))
         return result;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_COMMAND);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_COMMAND);
     Push(L, player);
     Push(L, fullcmd);
-    PlayerEventBindings.ExecuteCall();
+    ServerEventBindings.ExecuteCall();
     for (int i = 1; i <= lua_gettop(L); ++i)
     {
         if (lua_isnoneornil(L, i))
             continue;
         result = CHECKVAL<bool>(L, i, result);
     }
-    PlayerEventBindings.EndCall();
+    ServerEventBindings.EndCall();
     return result;
 }
 
@@ -544,38 +544,6 @@ void Eluna::OnQuestAbandon(Player* pPlayer, uint32 questId)
     PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_QUEST_ABANDON);
     Push(L, pPlayer);
     Push(L, questId);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
-}
-
-void Eluna::OnGmTicketCreate(Player* pPlayer, std::string& ticketText)
-{
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GM_TICKET_CREATE))
-        return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GM_TICKET_CREATE);
-    Push(L, pPlayer);
-    Push(L, ticketText);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
-}
-
-void Eluna::OnGmTicketUpdate(Player* pPlayer, std::string& ticketText)
-{
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GM_TICKET_UPDATE))
-        return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GM_TICKET_UPDATE);
-    Push(L, pPlayer);
-    Push(L, ticketText);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
-}
-
-void Eluna::OnGmTicketDelete(Player* pPlayer)
-{
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GM_TICKET_DELETE))
-        return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GM_TICKET_DELETE);
-    Push(L, pPlayer);
     PlayerEventBindings.ExecuteCall();
     PlayerEventBindings.EndCall();
 }
@@ -785,26 +753,26 @@ void Eluna::OnDuelEnd(Player* pWinner, Player* pLoser, DuelCompleteType type)
 
 void Eluna::OnEmote(Player* pPlayer, uint32 emote)
 {
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_EMOTE))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_EMOTE))
         return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_EMOTE);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_EMOTE);
     Push(L, pPlayer);
     Push(L, emote);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
 }
 
 void Eluna::OnTextEmote(Player* pPlayer, uint32 textEmote, uint32 emoteNum, uint64 guid)
 {
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_TEXT_EMOTE))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_TEXT_EMOTE))
         return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_TEXT_EMOTE);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_TEXT_EMOTE);
     Push(L, pPlayer);
     Push(L, textEmote);
     Push(L, emoteNum);
     Push(L, guid);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
 }
 
 void Eluna::OnSpellCast(Player* pPlayer, Spell* pSpell, bool skipCheck)
@@ -821,42 +789,42 @@ void Eluna::OnSpellCast(Player* pPlayer, Spell* pSpell, bool skipCheck)
 
 void Eluna::OnLogin(Player* pPlayer)
 {
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LOGIN))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_LOGIN))
         return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LOGIN);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_LOGIN);
     Push(L, pPlayer);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
 }
 
 void Eluna::OnLogout(Player* pPlayer)
 {
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_LOGOUT))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_LOGOUT))
         return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_LOGOUT);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_LOGOUT);
     Push(L, pPlayer);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
 }
 
 void Eluna::OnCreate(Player* pPlayer)
 {
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHARACTER_CREATE))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_CHARACTER_CREATE))
         return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHARACTER_CREATE);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_CHARACTER_CREATE);
     Push(L, pPlayer);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
 }
 
 void Eluna::OnDelete(uint32 guidlow)
 {
-    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHARACTER_DELETE))
+    if (!ServerEventBindings.HasEvents(PLAYER_EVENT_ON_CHARACTER_DELETE))
         return;
-    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHARACTER_DELETE);
+    ServerEventBindings.BeginCall(PLAYER_EVENT_ON_CHARACTER_DELETE);
     Push(L, guidlow);
-    PlayerEventBindings.ExecuteCall();
-    PlayerEventBindings.EndCall();
+    ServerEventBindings.ExecuteCall();
+    ServerEventBindings.EndCall();
 }
 
 void Eluna::OnSave(Player* pPlayer)
@@ -899,14 +867,14 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg)
     if (lang == LANG_ADDON && OnAddonMessage(pPlayer, type, msg, NULL, NULL, NULL, NULL))
         return true;
     bool result = true;
-    if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHAT))
+    if (ServerEventBindings.HasEvents(PLAYER_EVENT_ON_CHAT))
     {
-        PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHAT);
+        ServerEventBindings.BeginCall(PLAYER_EVENT_ON_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
         Push(L, type);
         Push(L, lang);
-        PlayerEventBindings.ExecuteCall();
+        ServerEventBindings.ExecuteCall();
         for (int i = 1; i <= lua_gettop(L); ++i)
         {
             if (lua_isnoneornil(L, i))
@@ -919,7 +887,7 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg)
                 break;
             }
         }
-        PlayerEventBindings.EndCall();
+        ServerEventBindings.EndCall();
     }
     return result;
 }
@@ -929,15 +897,15 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     if (lang == LANG_ADDON && OnAddonMessage(pPlayer, type, msg, NULL, NULL, pGroup, NULL))
         return true;
     bool result = true;
-    if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GROUP_CHAT))
+    if (ServerEventBindings.HasEvents(PLAYER_EVENT_ON_GROUP_CHAT))
     {
-        PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GROUP_CHAT);
+        ServerEventBindings.BeginCall(PLAYER_EVENT_ON_GROUP_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
         Push(L, type);
         Push(L, lang);
         Push(L, pGroup);
-        PlayerEventBindings.ExecuteCall();
+        ServerEventBindings.ExecuteCall();
         for (int i = 1; i <= lua_gettop(L); ++i)
         {
             if (lua_isnoneornil(L, i))
@@ -950,7 +918,7 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
                 break;
             }
         }
-        PlayerEventBindings.EndCall();
+        ServerEventBindings.EndCall();
     }
     return result;
 }
@@ -960,15 +928,15 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     if (lang == LANG_ADDON && OnAddonMessage(pPlayer, type, msg, NULL, pGuild, NULL, NULL))
         return true;
     bool result = true;
-    if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_GUILD_CHAT))
+    if (ServerEventBindings.HasEvents(PLAYER_EVENT_ON_GUILD_CHAT))
     {
-        PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_GUILD_CHAT);
+        ServerEventBindings.BeginCall(PLAYER_EVENT_ON_GUILD_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
         Push(L, type);
         Push(L, lang);
         Push(L, pGuild);
-        PlayerEventBindings.ExecuteCall();
+        ServerEventBindings.ExecuteCall();
         for (int i = 1; i <= lua_gettop(L); ++i)
         {
             if (lua_isnoneornil(L, i))
@@ -981,7 +949,7 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
                 break;
             }
         }
-        PlayerEventBindings.EndCall();
+        ServerEventBindings.EndCall();
     }
     return result;
 }
@@ -991,15 +959,15 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     if (lang == LANG_ADDON && OnAddonMessage(pPlayer, type, msg, NULL, NULL, NULL, pChannel))
         return true;
     bool result = true;
-    if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_CHANNEL_CHAT))
+    if (ServerEventBindings.HasEvents(PLAYER_EVENT_ON_CHANNEL_CHAT))
     {
-        PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_CHANNEL_CHAT);
+        ServerEventBindings.BeginCall(PLAYER_EVENT_ON_CHANNEL_CHAT);
         Push(L, pPlayer);
         Push(L, msg);
         Push(L, type);
         Push(L, lang);
         Push(L, pChannel->GetChannelId());
-        PlayerEventBindings.ExecuteCall();
+        ServerEventBindings.ExecuteCall();
         for (int i = 1; i <= lua_gettop(L); ++i)
         {
             if (lua_isnoneornil(L, i))
@@ -1012,7 +980,7 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
                 break;
             }
         }
-        PlayerEventBindings.EndCall();
+        ServerEventBindings.EndCall();
     }
     return result;
 }
@@ -1022,15 +990,15 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
     if (lang == LANG_ADDON && OnAddonMessage(pPlayer, type, msg, pReceiver, NULL, NULL, NULL))
         return true;
     bool result = true;
-    if (PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_WHISPER))
+    if (ServerEventBindings.HasEvents(PLAYER_EVENT_ON_WHISPER))
     {
-        PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_WHISPER);
+        ServerEventBindings.BeginCall(PLAYER_EVENT_ON_WHISPER);
         Push(L, pPlayer);
         Push(L, msg);
         Push(L, type);
         Push(L, lang);
         Push(L, pReceiver);
-        PlayerEventBindings.ExecuteCall();
+        ServerEventBindings.ExecuteCall();
         for (int i = 1; i <= lua_gettop(L); ++i)
         {
             if (lua_isnoneornil(L, i))
@@ -1043,7 +1011,7 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
                 break;
             }
         }
-        PlayerEventBindings.EndCall();
+        ServerEventBindings.EndCall();
     }
     return result;
 }
@@ -1053,56 +1021,56 @@ bool Eluna::OnChat(Player* pPlayer, uint32 type, uint32 lang, std::string& msg, 
 // Vehicle
 void Eluna::OnInstall(Vehicle* vehicle)
 {
-    if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_INSTALL))
+    if (!MapEventBindings.HasEvents(VEHICLE_EVENT_ON_INSTALL))
         return;
-    VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_INSTALL);
+    MapEventBindings.BeginCall(VEHICLE_EVENT_ON_INSTALL);
     Push(L, vehicle);
-    VehicleEventBindings.ExecuteCall();
-    VehicleEventBindings.EndCall();
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
 
 void Eluna::OnUninstall(Vehicle* vehicle)
 {
-    if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_UNINSTALL))
+    if (!MapEventBindings.HasEvents(VEHICLE_EVENT_ON_UNINSTALL))
         return;
-    VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_UNINSTALL);
+    MapEventBindings.BeginCall(VEHICLE_EVENT_ON_UNINSTALL);
     Push(L, vehicle);
-    VehicleEventBindings.ExecuteCall();
-    VehicleEventBindings.EndCall();
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
 
 void Eluna::OnInstallAccessory(Vehicle* vehicle, Creature* accessory)
 {
-    if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_INSTALL_ACCESSORY))
+    if (!MapEventBindings.HasEvents(VEHICLE_EVENT_ON_INSTALL_ACCESSORY))
         return;
-    VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_INSTALL_ACCESSORY);
+    MapEventBindings.BeginCall(VEHICLE_EVENT_ON_INSTALL_ACCESSORY);
     Push(L, vehicle);
     Push(L, accessory);
-    VehicleEventBindings.ExecuteCall();
-    VehicleEventBindings.EndCall();
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
 
 void Eluna::OnAddPassenger(Vehicle* vehicle, Unit* passenger, int8 seatId)
 {
-    if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_ADD_PASSENGER))
+    if (!MapEventBindings.HasEvents(VEHICLE_EVENT_ON_ADD_PASSENGER))
         return;
-    VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_ADD_PASSENGER);
+    MapEventBindings.BeginCall(VEHICLE_EVENT_ON_ADD_PASSENGER);
     Push(L, vehicle);
     Push(L, passenger);
     Push(L, seatId);
-    VehicleEventBindings.ExecuteCall();
-    VehicleEventBindings.EndCall();
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
 
 void Eluna::OnRemovePassenger(Vehicle* vehicle, Unit* passenger)
 {
-    if (!VehicleEventBindings.HasEvents(VEHICLE_EVENT_ON_REMOVE_PASSENGER))
+    if (!MapEventBindings.HasEvents(VEHICLE_EVENT_ON_REMOVE_PASSENGER))
         return;
-    VehicleEventBindings.BeginCall(VEHICLE_EVENT_ON_REMOVE_PASSENGER);
+    MapEventBindings.BeginCall(VEHICLE_EVENT_ON_REMOVE_PASSENGER);
     Push(L, vehicle);
     Push(L, passenger);
-    VehicleEventBindings.ExecuteCall();
-    VehicleEventBindings.EndCall();
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
 #endif
 #endif
@@ -1318,57 +1286,54 @@ void Eluna::OnCreate(Group* group, uint64 leaderGuid, GroupType groupType)
 }
 
 /* Map */
-void Eluna::OnCreate(Map* map)
+void Eluna::OnCreate()
 {
-    if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_CREATE))
+    if (!MapEventBindings.HasEvents(MAP_EVENT_ON_CREATE))
         return;
-    ServerEventBindings.BeginCall(MAP_EVENT_ON_CREATE);
-    Push(L, map);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    MapEventBindings.BeginCall(MAP_EVENT_ON_CREATE);
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
-void Eluna::OnDestroy(Map* map)
+void Eluna::OnDestroy()
 {
-    if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_DESTROY))
+    if (!MapEventBindings.HasEvents(MAP_EVENT_ON_DESTROY))
         return;
-    ServerEventBindings.BeginCall(MAP_EVENT_ON_DESTROY);
-    Push(L, map);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    MapEventBindings.BeginCall(MAP_EVENT_ON_DESTROY);
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
 void Eluna::OnPlayerEnter(Map* map, Player* player)
 {
-    if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_PLAYER_ENTER))
+    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_MAP_ENTER))
         return;
-    ServerEventBindings.BeginCall(MAP_EVENT_ON_PLAYER_ENTER);
-    Push(L, map);
+    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_MAP_ENTER);
     Push(L, player);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    Push(L, map);
+    PlayerEventBindings.ExecuteCall();
+    PlayerEventBindings.EndCall();
 }
 void Eluna::OnPlayerLeave(Map* map, Player* player)
 {
-    if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_PLAYER_LEAVE))
+    if (!PlayerEventBindings.HasEvents(PLAYER_EVENT_ON_MAP_LEAVE))
         return;
-    ServerEventBindings.BeginCall(MAP_EVENT_ON_PLAYER_LEAVE);
-    Push(L, map);
+    PlayerEventBindings.BeginCall(PLAYER_EVENT_ON_MAP_LEAVE);
     Push(L, player);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    Push(L, map);
+    PlayerEventBindings.ExecuteCall();
+    PlayerEventBindings.EndCall();
 
     // Player's timed events must not trigger from another map in any way
     m_EventMgr.RemoveEvents(&player->m_Events);
 }
-void Eluna::OnUpdate(Map* map, uint32 diff)
+void Eluna::OnUpdate(uint32 diff)
 {
     m_EventMgr.Update(diff);
-    if (!ServerEventBindings.HasEvents(MAP_EVENT_ON_UPDATE))
+    if (!MapEventBindings.HasEvents(MAP_EVENT_ON_UPDATE))
         return;
-    ServerEventBindings.BeginCall(MAP_EVENT_ON_UPDATE);
-    Push(L, map);
+    MapEventBindings.BeginCall(MAP_EVENT_ON_UPDATE);
     Push(L, diff);
-    ServerEventBindings.ExecuteCall();
-    ServerEventBindings.EndCall();
+    MapEventBindings.ExecuteCall();
+    MapEventBindings.EndCall();
 }
 
 // creature

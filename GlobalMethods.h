@@ -233,14 +233,14 @@ namespace LuaGlobalFunctions
     }
 
     /* OTHER */
-    int RegisterPacketEvent(lua_State* L)
+    int RegisterGlobalEvent(lua_State* L)
     {
         lua_settop(L, 2);
         uint32 ev = Eluna::CHECKVAL<uint32>(L, 1);
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         if (functionRef > 0)
-            Eluna::GetEluna(L)->Register(REGTYPE_PACKET, 0, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_GLOBAL, 0, ev, functionRef);
         return 0;
     }
 
@@ -255,14 +255,14 @@ namespace LuaGlobalFunctions
         return 0;
     }
 
-    int RegisterPlayerEvent(lua_State* L)
+    int RegisterPacketEvent(lua_State* L)
     {
         lua_settop(L, 2);
         uint32 ev = Eluna::CHECKVAL<uint32>(L, 1);
         luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
         int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         if (functionRef > 0)
-            Eluna::GetEluna(L)->Register(REGTYPE_PLAYER, 0, ev, functionRef);
+            Eluna::GetEluna(L)->Register(REGTYPE_PACKET, 0, ev, functionRef);
         return 0;
     }
 
@@ -285,6 +285,28 @@ namespace LuaGlobalFunctions
         int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         if (functionRef > 0)
             Eluna::GetEluna(L)->Register(REGTYPE_GROUP, 0, ev, functionRef);
+        return 0;
+    }
+
+    int RegisterMapEvent(lua_State* L)
+    {
+        lua_settop(L, 2);
+        uint32 ev = Eluna::CHECKVAL<uint32>(L, 1);
+        luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
+        int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        if (functionRef > 0)
+            Eluna::GetEluna(L)->Register(REGTYPE_MAP, 0, ev, functionRef);
+        return 0;
+    }
+
+    int RegisterPlayerEvent(lua_State* L)
+    {
+        lua_settop(L, 2);
+        uint32 ev = Eluna::CHECKVAL<uint32>(L, 1);
+        luaL_checktype(L, lua_gettop(L), LUA_TFUNCTION);
+        int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        if (functionRef > 0)
+            Eluna::GetEluna(L)->Register(REGTYPE_PLAYER, 0, ev, functionRef);
         return 0;
     }
 

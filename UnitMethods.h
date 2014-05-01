@@ -601,7 +601,7 @@ namespace LuaUnit
                 type = POWER_MANA;
             }
         }
-        else if (type < 0 || type >= POWER_ALL)
+        else if (type < 0 || type >= (uint32)POWER_ALL)
             return luaL_argerror(L, 2, "valid Powers expected");
 
         Eluna::Push(L, unit->GetPower((Powers)type));
@@ -640,7 +640,7 @@ namespace LuaUnit
                 type = POWER_MANA;
             }
         }
-        else if (type < 0 || type >= POWER_ALL)
+        else if (type < 0 || type >= (uint32)POWER_ALL)
             return luaL_argerror(L, 2, "valid Powers expected");
 
         Eluna::Push(L, unit->GetMaxPower((Powers)type));
@@ -1260,12 +1260,12 @@ namespace LuaUnit
         return 0;
     }
 
-    static void PrepareMove(Unit* unit)
-    {
-        unit->GetMotionMaster()->MovementExpired(); // Chase
-        unit->StopMoving(); // Some
-        unit->GetMotionMaster()->Clear(); // all
-    }
+    //static void PrepareMove(Unit* unit)
+    //{
+    //    unit->GetMotionMaster()->MovementExpired(); // Chase
+    //    unit->StopMoving(); // Some
+    //    unit->GetMotionMaster()->Clear(); // all
+    //}
 
     int MoveStop(lua_State* L, Unit* unit)
     {

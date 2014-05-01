@@ -347,12 +347,6 @@ public:
         return 1;
     }
 };
-template<typename T> const char* ElunaTemplate<T>::tname = NULL;
-template<typename T> bool ElunaTemplate<T>::manageMemory = false;
-#if (!defined(TBC) && !defined(CLASSIC))
-// fix compile error about accessing vehicle destructor
-template<> int ElunaTemplate<Vehicle>::gcT(lua_State* L) { return 0; }
-#endif
 
 struct EventBind
 {
@@ -419,12 +413,12 @@ struct LuaEvent : public BasicEvent
     // Should never execute on dead events
     bool Execute(uint64 time, uint32 diff);
 
-    EventProcessor* events; // Pointer to events (holds the timed event)
+    Eluna* E;       // State containing lua function to run (using Eluna to avoid locking)
     int funcRef;    // Lua function reference ID, also used as event ID
     uint32 delay;   // Delay between event calls
     uint32 calls;   // Amount of calls to make, 0 for infinite
+    EventProcessor* events; // Pointer to events (holds the timed event)
     WorldObject* obj;   // Object to push
-    Eluna* E;       // State containing lua function to run (using Eluna to avoid locking)
 };
 
 struct EventMgr

@@ -1905,7 +1905,7 @@ namespace LuaPlayer
         };
         static const uint32 skillsSize = sizeof(skillsArray) / sizeof(*skillsArray);
 
-        for (int i = 0; i < skillsSize; ++i)
+        for (uint32 i = 0; i < skillsSize; ++i)
         {
             if (player->HasSkill(skillsArray[i]))
                 player->UpdateSkill(skillsArray[i], step);

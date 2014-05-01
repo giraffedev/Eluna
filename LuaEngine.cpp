@@ -354,7 +354,7 @@ Eluna* StateMsg::GetTarget() const
 {
     if (t_mapid == MAPID_INVALID)
         return Eluna::GEluna;
-    if (Map* map = sMapMgr->FindMap(t_mapid, t_instanceid))
+    if (Map* map = esMapMgr->FindMap(t_mapid, t_instanceid))
         return map->GetEluna();
     return NULL;
 }
@@ -518,7 +518,7 @@ Eluna::~Eluna()
 //
 //#ifdef MANGOS
 //    // Check config file for eluna is enabled or disabled
-//    if (!sWorld->getConfig(CONFIG_BOOL_ELUNA_ENABLED))
+//    if (!esWorld->getConfig(CONFIG_BOOL_ELUNA_ENABLED))
 //    {
 //        ELUNA_LOG_ERROR("[Eluna]: LuaEngine is Disabled. (If you want to use it please set config in 'mangosd.conf')");
 //        return false;
@@ -761,7 +761,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     case REGTYPE_CREATURE:
         if (evt < CREATURE_EVENT_COUNT)
         {
-            if (!sObjectMgr->GetCreatureTemplate(id))
+            if (!esObjectMgr->GetCreatureTemplate(id))
             {
                 luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
                 luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
@@ -776,7 +776,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     case REGTYPE_GAMEOBJECT:
         if (evt < GAMEOBJECT_EVENT_COUNT)
         {
-            if (!sObjectMgr->GetGameObjectTemplate(id))
+            if (!esObjectMgr->GetGameObjectTemplate(id))
             {
                 luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
                 luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", id);
@@ -791,7 +791,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     case REGTYPE_ITEM:
         if (evt < ITEM_EVENT_COUNT)
         {
-            if (!sObjectMgr->GetItemTemplate(id))
+            if (!esObjectMgr->GetItemTemplate(id))
             {
                 luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
                 luaL_error(L, "Couldn't find a item with (ID: %d)!", id);
@@ -806,7 +806,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     case REGTYPE_CREATURE_GOSSIP:
         if (evt < GOSSIP_EVENT_COUNT)
         {
-            if (!sObjectMgr->GetCreatureTemplate(id))
+            if (!esObjectMgr->GetCreatureTemplate(id))
             {
                 luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
                 luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
@@ -821,7 +821,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     case REGTYPE_GAMEOBJECT_GOSSIP:
         if (evt < GOSSIP_EVENT_COUNT)
         {
-            if (!sObjectMgr->GetGameObjectTemplate(id))
+            if (!esObjectMgr->GetGameObjectTemplate(id))
             {
                 luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
                 luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", id);
@@ -836,7 +836,7 @@ void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef)
     case REGTYPE_ITEM_GOSSIP:
         if (evt < GOSSIP_EVENT_COUNT)
         {
-            if (!sObjectMgr->GetItemTemplate(id))
+            if (!esObjectMgr->GetItemTemplate(id))
             {
                 luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
                 luaL_error(L, "Couldn't find a item with (ID: %d)!", id);

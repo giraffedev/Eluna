@@ -126,9 +126,9 @@ namespace LuaGroup
     int GetLeader(lua_State* L, Group* group)
     {
 #ifdef MANGOS
-        Eluna::Push(L, sObjectAccessor->FindPlayer(group->GetLeaderGuid()));
+        Eluna::Push(L, esObjectAccessor->FindPlayer(group->GetLeaderGuid()));
 #else
-        Eluna::Push(L, sObjectAccessor->FindPlayer(group->GetLeaderGUID()));
+        Eluna::Push(L, esObjectAccessor->FindPlayer(group->GetLeaderGUID()));
 #endif
         return 1;
     }

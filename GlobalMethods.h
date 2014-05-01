@@ -48,27 +48,27 @@ namespace LuaGlobalFunctions
     {
         uint32 questId = Eluna::CHECKVAL<uint32>(L, 1);
 
-        Eluna::Push(L, sObjectMgr->GetQuestTemplate(questId));
+        Eluna::Push(L, esObjectMgr->GetQuestTemplate(questId));
         return 1;
     }
 
     int GetPlayerByGUID(lua_State* L)
     {
         uint64 guid = Eluna::CHECKVAL<uint64>(L, 1);
-        Eluna::Push(L, sObjectAccessor->FindPlayer(ObjectGuid(guid)));
+        Eluna::Push(L, esObjectAccessor->FindPlayer(ObjectGuid(guid)));
         return 1;
     }
 
     int GetPlayerByName(lua_State* L)
     {
         const char* message = Eluna::CHECKVAL<const char*>(L, 1);
-        Eluna::Push(L, sObjectAccessor->FindPlayerByName(message));
+        Eluna::Push(L, esObjectAccessor->FindPlayerByName(message));
         return 1;
     }
 
     int GetGameTime(lua_State* L)
     {
-        time_t time = sWorld->GetGameTime();
+        time_t time = esWorld->GetGameTime();
         if (time < 0)
             Eluna::Push(L, int32(time));
         else
@@ -82,7 +82,7 @@ namespace LuaGlobalFunctions
         uint32 instanceID = Eluna::CHECKVAL<uint32>(L, 2, 0);
         uint32 team = Eluna::CHECKVAL<uint32>(L, 3, TEAM_NEUTRAL);
 
-        Map* map = sMapMgr->FindMap(mapID, instanceID);
+        Map* map = esMapMgr->FindMap(mapID, instanceID);
         if (!map)
             return 0;
 
@@ -116,7 +116,7 @@ namespace LuaGlobalFunctions
     int GetGuildByName(lua_State* L)
     {
         const char* name = Eluna::CHECKVAL<const char*>(L, 1);
-        Eluna::Push(L, sGuildMgr->GetGuildByName(name));
+        Eluna::Push(L, esGuildMgr->GetGuildByName(name));
         return 1;
     }
 
@@ -132,13 +132,13 @@ namespace LuaGlobalFunctions
     {
         uint64 guid = Eluna::CHECKVAL<uint64>(L, 1);
 
-        Eluna::Push(L, sGuildMgr->GetGuildByLeader(ObjectGuid(guid)));
+        Eluna::Push(L, esGuildMgr->GetGuildByLeader(ObjectGuid(guid)));
         return 1;
     }
 
     int GetPlayerCount(lua_State* L)
     {
-        Eluna::Push(L, sWorld->GetActiveSessionCount());
+        Eluna::Push(L, esWorld->GetActiveSessionCount());
         return 1;
     }
 
@@ -198,12 +198,12 @@ namespace LuaGlobalFunctions
         if (loc_idx < 0 || loc_idx >= MAX_LOCALES)
             return luaL_argerror(L, 2, "valid LocaleConstant expected");
 
-        const ItemTemplate* temp = sObjectMgr->GetItemTemplate(entry);
+        const ItemTemplate* temp = esObjectMgr->GetItemTemplate(entry);
         if (!temp)
             return luaL_argerror(L, 1, "valid ItemEntry expected");
 
         std::string name = temp->Name1;
-        if (ItemLocale const* il = sObjectMgr->GetItemLocale(entry))
+        if (ItemLocale const* il = esObjectMgr->GetItemLocale(entry))
             ObjectMgr::GetLocaleString(il->Name, loc_idx, name);
 
         std::ostringstream oss;
@@ -397,7 +397,7 @@ namespace LuaGlobalFunctions
     int SendWorldMessage(lua_State* L)
     {
         const char* message = Eluna::CHECKVAL<const char*>(L, 1);
-        sWorld->SendServerMessage(SERVER_MSG_STRING, message);
+        esWorld->SendServerMessage(SERVER_MSG_STRING, message);
         return 0;
     }
 
@@ -551,7 +551,7 @@ namespace LuaGlobalFunctions
 #endif
 
 #ifdef MANGOS
-        Map* map = sMapMgr->FindMap(mapID, instanceID);
+        Map* map = esMapMgr->FindMap(mapID, instanceID);
         if (!map)
             return 0;
 
@@ -570,7 +570,7 @@ namespace LuaGlobalFunctions
 #endif
                 Creature* pCreature = new Creature;
                 // used guids from specially reserved range (can be 0 if no free values)
-                uint32 lowguid = sObjectMgr->GenerateStaticCreatureLowGuid();
+                uint32 lowguid = esObjectMgr->GenerateStaticCreatureLowGuid();
                 if (!lowguid)
                     return 0;
 
@@ -594,7 +594,7 @@ namespace LuaGlobalFunctions
                 pCreature->LoadFromDB(db_guid, map);
 
                 map->Add(pCreature);
-                sObjectMgr->AddCreatureToGrid(db_guid, sObjectMgr->GetCreatureData(db_guid));
+                esObjectMgr->AddCreatureToGrid(db_guid, esObjectMgr->GetCreatureData(db_guid));
                 if (durorresptime)
                     pCreature->ForcedDespawn(durorresptime);
 
@@ -646,7 +646,7 @@ namespace LuaGlobalFunctions
                     return 0;
 
                 // used guids from specially reserved range (can be 0 if no free values)
-                uint32 db_lowGUID = sObjectMgr->GenerateStaticGameObjectLowGuid();
+                uint32 db_lowGUID = esObjectMgr->GenerateStaticGameObjectLowGuid();
                 if (!db_lowGUID)
                     return 0;
 
@@ -684,7 +684,7 @@ namespace LuaGlobalFunctions
 
                 map->Add(pGameObj);
 
-                sObjectMgr->AddGameobjectToGrid(db_lowGUID, sObjectMgr->GetGOData(db_lowGUID));
+                esObjectMgr->AddGameobjectToGrid(db_lowGUID, esObjectMgr->GetGOData(db_lowGUID));
 
                 Eluna::Push(L, pGameObj);
             }
@@ -711,7 +711,7 @@ namespace LuaGlobalFunctions
             return 1;
         }
 #else
-        Map* map = sMapMgr->FindMap(mapID, instanceID);
+        Map* map = esMapMgr->FindMap(mapID, instanceID);
         if (!map)
             return 0;
 
@@ -722,7 +722,7 @@ namespace LuaGlobalFunctions
             if (save)
             {
                 Creature* creature = new Creature();
-                if (!creature->Create(sObjectMgr->GenerateLowGuid(HIGHGUID_UNIT), map, phase, entry, 0, 0, x, y, z, o))
+                if (!creature->Create(esObjectMgr->GenerateLowGuid(HIGHGUID_UNIT), map, phase, entry, 0, 0, x, y, z, o))
                 {
                     delete creature;
                     return 0;
@@ -737,7 +737,7 @@ namespace LuaGlobalFunctions
                     return 0;
                 }
 
-                sObjectMgr->AddCreatureToGrid(db_lowguid, sObjectMgr->GetCreatureData(db_lowguid));
+                esObjectMgr->AddCreatureToGrid(db_lowguid, esObjectMgr->GetCreatureData(db_lowguid));
                 Eluna::Push(L, creature);
             }
             else
@@ -759,7 +759,7 @@ namespace LuaGlobalFunctions
 
         if (spawntype == 2) // Spawn object
         {
-            const GameObjectTemplate* objectInfo = sObjectMgr->GetGameObjectTemplate(entry);
+            const GameObjectTemplate* objectInfo = esObjectMgr->GetGameObjectTemplate(entry);
             if (!objectInfo)
                 return 0;
 
@@ -767,7 +767,7 @@ namespace LuaGlobalFunctions
                 return 0;
 
             GameObject* object = new GameObject;
-            uint32 lowguid = sObjectMgr->GenerateLowGuid(HIGHGUID_GAMEOBJECT);
+            uint32 lowguid = esObjectMgr->GenerateLowGuid(HIGHGUID_GAMEOBJECT);
 
             if (!object->Create(lowguid, objectInfo->entry, map, phase, x, y, z, o, 0.0f, 0.0f, 0.0f, 0.0f, 0, GO_STATE_READY))
             {
@@ -790,7 +790,7 @@ namespace LuaGlobalFunctions
                     return false;
                 }
 
-                sObjectMgr->AddGameobjectToGrid(lowguid, sObjectMgr->GetGOData(lowguid));
+                esObjectMgr->AddGameobjectToGrid(lowguid, esObjectMgr->GetGOData(lowguid));
             }
             else
                 map->AddToMap(object);
@@ -822,22 +822,22 @@ namespace LuaGlobalFunctions
         uint32 extendedcost = Eluna::CHECKVAL<uint32>(L, 5);
 
 #ifdef MANGOS
-        if (!sObjectMgr->IsVendorItemValid(false, "npc_vendor", entry, item, maxcount, incrtime, extendedcost, 0))
+        if (!esObjectMgr->IsVendorItemValid(false, "npc_vendor", entry, item, maxcount, incrtime, extendedcost, 0))
             return 0;
 #ifndef CLASSIC
-        sObjectMgr->AddVendorItem(entry, item, maxcount, incrtime, extendedcost);
+        esObjectMgr->AddVendorItem(entry, item, maxcount, incrtime, extendedcost);
 #else
-        sObjectMgr->AddVendorItem(entry, item, maxcount, incrtime);
+        esObjectMgr->AddVendorItem(entry, item, maxcount, incrtime);
 #endif
 #else
 #ifdef CATA
-        if (!sObjectMgr->IsVendorItemValid(entry, item, maxcount, incrtime, extendedcost, 1))
+        if (!esObjectMgr->IsVendorItemValid(entry, item, maxcount, incrtime, extendedcost, 1))
             return 0;
-        sObjectMgr->AddVendorItem(entry, item, maxcount, incrtime, extendedcost, 1);
+        esObjectMgr->AddVendorItem(entry, item, maxcount, incrtime, extendedcost, 1);
 #else
-        if (!sObjectMgr->IsVendorItemValid(entry, item, maxcount, incrtime, extendedcost))
+        if (!esObjectMgr->IsVendorItemValid(entry, item, maxcount, incrtime, extendedcost))
             return 0;
-        sObjectMgr->AddVendorItem(entry, item, maxcount, incrtime, extendedcost);
+        esObjectMgr->AddVendorItem(entry, item, maxcount, incrtime, extendedcost);
 #endif
 #endif
         return 0;
@@ -847,13 +847,13 @@ namespace LuaGlobalFunctions
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
         uint32 item = Eluna::CHECKVAL<uint32>(L, 2);
-        if (!sObjectMgr->GetCreatureTemplate(entry))
+        if (!esObjectMgr->GetCreatureTemplate(entry))
             return luaL_argerror(L, 1, "valid CreatureEntry expected");
 
 #ifdef CATA
-        sObjectMgr->RemoveVendorItem(entry, item, 1);
+        esObjectMgr->RemoveVendorItem(entry, item, 1);
 #else
-        sObjectMgr->RemoveVendorItem(entry, item);
+        esObjectMgr->RemoveVendorItem(entry, item);
 #endif
         return 0;
     }
@@ -862,16 +862,16 @@ namespace LuaGlobalFunctions
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
 
-        VendorItemData const* items = sObjectMgr->GetNpcVendorItemList(entry);
+        VendorItemData const* items = esObjectMgr->GetNpcVendorItemList(entry);
         if (!items || items->Empty())
             return 0;
 
         VendorItemList const itemlist = items->m_items;
         for (VendorItemList::const_iterator itr = itemlist.begin(); itr != itemlist.end(); ++itr)
 #ifdef CATA
-            sObjectMgr->RemoveVendorItem(entry, (*itr)->item, 1);
+            esObjectMgr->RemoveVendorItem(entry, (*itr)->item, 1);
 #else
-            sObjectMgr->RemoveVendorItem(entry, (*itr)->item);
+            esObjectMgr->RemoveVendorItem(entry, (*itr)->item);
 #endif
         return 0;
     }
@@ -910,7 +910,7 @@ namespace LuaGlobalFunctions
             return 0;
         }
 
-        switch (sWorld->BanAccount((BanMode)banMode, nameOrIP, duration, reason, whoBanned->GetSession() ? whoBanned->GetName() : ""))
+        switch (esWorld->BanAccount((BanMode)banMode, nameOrIP, duration, reason, whoBanned->GetSession() ? whoBanned->GetName() : ""))
         {
         case BAN_SUCCESS:
             if (duration > 0)
@@ -928,7 +928,7 @@ namespace LuaGlobalFunctions
 
     int SaveAllPlayers(lua_State* L)
     {
-        sObjectAccessor->SaveAllPlayers();
+        esObjectAccessor->SaveAllPlayers();
         return 0;
     }
 
@@ -958,7 +958,7 @@ namespace LuaGlobalFunctions
 #ifdef MANGOS
             ItemTemplate const* item_proto = ObjectMgr::GetItemPrototype(entry);
 #else
-            ItemTemplate const* item_proto = sObjectMgr->GetItemTemplate(entry);
+            ItemTemplate const* item_proto = esObjectMgr->GetItemTemplate(entry);
 #endif
             if (!item_proto)
             {
@@ -1147,14 +1147,14 @@ namespace LuaGlobalFunctions
     {
         Corpse* corpse = Eluna::CHECKOBJ<Corpse>(L, 1);
 
-        sObjectAccessor->AddCorpse(corpse);
+        esObjectAccessor->AddCorpse(corpse);
         return 0;
     }
 
     int RemoveCorpse(lua_State* L)
     {
         Corpse* corpse = Eluna::CHECKOBJ<Corpse>(L, 1);
-        sObjectAccessor->RemoveCorpse(corpse);
+        esObjectAccessor->RemoveCorpse(corpse);
         return 1;
     }
 
@@ -1163,13 +1163,13 @@ namespace LuaGlobalFunctions
         uint64 guid = Eluna::CHECKVAL<uint64>(L, 1);
         bool insignia = Eluna::CHECKVAL<bool>(L, 2, false);
 
-        Eluna::Push(L, sObjectAccessor->ConvertCorpseForPlayer(ObjectGuid(guid), insignia));
+        Eluna::Push(L, esObjectAccessor->ConvertCorpseForPlayer(ObjectGuid(guid), insignia));
         return 0;
     }
 
     int RemoveOldCorpses(lua_State* L)
     {
-        sObjectAccessor->RemoveOldCorpses();
+        esObjectAccessor->RemoveOldCorpses();
         return 0;
     }
 
@@ -1177,7 +1177,7 @@ namespace LuaGlobalFunctions
     {
         uint32 zoneId = Eluna::CHECKVAL<uint32>(L, 1);
 #ifdef MANGOS
-        Weather* weather = sWorld->FindWeather(zoneId);
+        Weather* weather = esWorld->FindWeather(zoneId);
 #else
         Weather* weather = WeatherMgr::FindWeather(zoneId);
 #endif
@@ -1189,7 +1189,7 @@ namespace LuaGlobalFunctions
     {
         uint32 zoneId = Eluna::CHECKVAL<uint32>(L, 1);
 #ifdef MANGOS
-        Weather* weather = sWorld->AddWeather(zoneId);
+        Weather* weather = esWorld->AddWeather(zoneId);
 #else
         Weather* weather = WeatherMgr::AddWeather(zoneId);
 #endif
@@ -1201,7 +1201,7 @@ namespace LuaGlobalFunctions
     {
         uint32 zoneId = Eluna::CHECKVAL<uint32>(L, 1);
 #ifdef MANGOS
-        sWorld->RemoveWeather(zoneId);
+        esWorld->RemoveWeather(zoneId);
 #else
         WeatherMgr::RemoveWeather(zoneId);
 #endif
@@ -1230,7 +1230,7 @@ namespace LuaGlobalFunctions
             return 0;
 
         TRINITY_READ_GUARD(HashMapHolder<Player>::LockType, *HashMapHolder<Player>::GetLock());
-        HashMapHolder<Player>::MapType const& m = sObjectAccessor->GetPlayers();
+        HashMapHolder<Player>::MapType const& m = esObjectAccessor->GetPlayers();
         for (HashMapHolder<Player>::MapType::const_iterator itr = m.begin(); itr != m.end(); ++itr)
         {
             Player* player = itr->second;

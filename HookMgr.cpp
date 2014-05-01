@@ -461,7 +461,7 @@ bool Eluna::OnCommand(Player* player, const char* text)
             if (std::string("eluna").find(eluna) == 0)
             {
                 ReloadLuaStates();
-                sWorld->SendServerMessage(SERVER_MSG_STRING, "Eluna reloaded.");
+                esWorld->SendServerMessage(SERVER_MSG_STRING, "Eluna reloaded.");
                 return false;
             }
         }

@@ -82,18 +82,12 @@ typedef VehicleInfo Vehicle;
 typedef std::map<std::string, std::string> LoadedScripts;
 
 #ifdef MANGOS
-#undef  sWorld
-#undef  sMapMgr
-#undef  sGuildMgr
-#undef  sObjectMgr
-#undef  sAccountMgr
-#undef  sObjectAccessor
-#define sWorld                  (&MaNGOS::Singleton<World>::Instance())
-#define sMapMgr                 (&MapManager::Instance())
-#define sGuildMgr               (&MaNGOS::Singleton<GuildMgr>::Instance())
-#define sObjectMgr              (&MaNGOS::Singleton<ObjectMgr>::Instance())
-#define sAccountMgr             (&MaNGOS::Singleton<AccountMgr>::Instance())
-#define sObjectAccessor         (&ObjectAccessor::Instance())
+#define esWorld                 (&MaNGOS::Singleton<World>::Instance())
+#define esMapMgr                (&MapManager::Instance())
+#define esGuildMgr              (&MaNGOS::Singleton<GuildMgr>::Instance())
+#define esObjectMgr             (&MaNGOS::Singleton<ObjectMgr>::Instance())
+#define esAccountMgr            (&MaNGOS::Singleton<AccountMgr>::Instance())
+#define esObjectAccessor        (&ObjectAccessor::Instance())
 #define MAKE_NEW_GUID(l, e, h)  ObjectGuid(h, e, l)
 #define GET_GUID                GetObjectGuid
 #define GetGameObjectTemplate   GetGameObjectInfo
@@ -132,6 +126,12 @@ enum SelectAggroTarget
 #define Opcodes                 OpcodesList
 #endif
 #else
+#define esWorld                 sWorld
+#define esMapMgr                sMapMgr
+#define esGuildMgr              sGuildMgr
+#define esObjectMgr             sObjectMgr
+#define esAccountMgr            sAccountMgr
+#define esObjectAccessor        sObjectAccessor
 #ifndef CATA
 typedef uint64 ObjectGuid;
 #endif

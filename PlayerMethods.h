@@ -118,7 +118,7 @@ namespace LuaPlayer
         else
         {
             uint32 entry = Eluna::CHECKVAL<uint32>(L, 2);
-            const ItemTemplate* temp = sObjectMgr->GetItemTemplate(entry);
+            const ItemTemplate* temp = esObjectMgr->GetItemTemplate(entry);
             if (temp)
                 Eluna::Push(L, player->CanUseItem(temp));
             else
@@ -725,7 +725,7 @@ namespace LuaPlayer
     {
         if (!player->GetGuildId())
             return 0;
-        Eluna::Push(L, sGuildMgr->GetGuildNameById(player->GetGuildId()));
+        Eluna::Push(L, esGuildMgr->GetGuildNameById(player->GetGuildId()));
         return 1;
     }
 
@@ -932,7 +932,7 @@ namespace LuaPlayer
 
     int GetGuild(lua_State* L, Player* player)
     {
-        Eluna::Push(L, sGuildMgr->GetGuildById(player->GetGuildId()));
+        Eluna::Push(L, esGuildMgr->GetGuildById(player->GetGuildId()));
         return 1;
     }
 
@@ -951,7 +951,7 @@ namespace LuaPlayer
     int GetAccountName(lua_State* L, Player* player)
     {
         std::string accName;
-        if (sAccountMgr->GetName(player->GetSession()->GetAccountId(), accName))
+        if (esAccountMgr->GetName(player->GetSession()->GetAccountId(), accName))
             Eluna::Push(L, accName);
         else
             return 0;
@@ -1415,7 +1415,7 @@ namespace LuaPlayer
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 2);
 
-        Quest const* quest = sObjectMgr->GetQuestTemplate(entry);
+        Quest const* quest = esObjectMgr->GetQuestTemplate(entry);
         if (quest)
             player->RewardQuest(quest, 0, player);
         return 0;
@@ -2252,7 +2252,7 @@ namespace LuaPlayer
         uint32 questId = Eluna::CHECKVAL<uint32>(L, 2);
         bool activeAccept = Eluna::CHECKVAL<bool>(L, 3, true);
 
-        Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
+        Quest const* quest = esObjectMgr->GetQuestTemplate(questId);
         if (!quest)
             return 0;
 

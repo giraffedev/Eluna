@@ -162,7 +162,7 @@ namespace LuaItem
 
         const ItemTemplate* temp = item->GetTemplate();
         std::string name = temp->Name1;
-        if (ItemLocale const* il = sObjectMgr->GetItemLocale(temp->ItemId))
+        if (ItemLocale const* il = esObjectMgr->GetItemLocale(temp->ItemId))
             ObjectMgr::GetLocaleString(il->Name, loc_idx, name);
 
 #ifndef CLASSIC

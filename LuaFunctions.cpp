@@ -1207,8 +1207,10 @@ void ElunaTemplate<T>::SetMethods(Eluna* E, ElunaMethods<C>* methodTable)
             continue;
         else if (methodTable->env == ENV_WORLD && E->GMap)
             continue;
+        else if (methodTable->env == ENV_NONE)
+            continue;
         else
-            ASSERT(methodTable->env == ENV_GLOBAL);
+            ASSERT(methodTable->env >= ENV_NONE && methodTable->env < ENV_MAX); // none of defined types
         lua_pushstring(E->L, methodTable->name);
         lua_pushlightuserdata(E->L, (void*)methodTable);
         lua_pushcclosure(E->L, thunk, 1);

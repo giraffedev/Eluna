@@ -963,47 +963,44 @@ ElunaMethods<Quest> QuestMethods[] =
 #endif
     { ENV_GLOBAL, "IsRepeatable", &LuaQuest::IsRepeatable },                    // :IsRepeatable() - Returns true or false if the quest is repeatable
 
-    // Setters
-    { ENV_GLOBAL, "SetFlag", &LuaQuest::SetFlag },                              // :SetFlag(flag) - Sets the flag of the quest by the specified flag
-
     { ENV_NONE, NULL, NULL }
 };
 
 ElunaMethods<Group> GroupMethods[] =
 {
     // Getters
-    { ENV_GLOBAL, "GetMembers", &LuaGroup::GetMembers },                        // :GetMembers() - returns a table the players in this group. (Online?)
-    { ENV_GLOBAL, "GetLeaderGUID", &LuaGroup::GetLeaderGUID },
-    { ENV_GLOBAL, "GetLeader", &LuaGroup::GetLeader },
-    { ENV_GLOBAL, "GetGUID", &LuaGroup::GetGUID },
-    { ENV_GLOBAL, "GetMemberGroup", &LuaGroup::GetMemberGroup },                // :GetMemberGroup(player) - Returns the player's subgroup ID
-    { ENV_GLOBAL, "GetMemberGUID", &LuaGroup::GetMemberGUID },                  // :GetMemberGUID("name") - Returns the member's GUID
-    { ENV_GLOBAL, "GetMembersCount", &LuaGroup::GetMembersCount },              // :GetMembersCount() - Returns the member count of the group
+    { ENV_WORLD, "GetMembers", &LuaGroup::GetMembers },                         // :GetMembers() - returns a table the players in this group. (Online?)
+    { ENV_WORLD, "GetLeaderGUID", &LuaGroup::GetLeaderGUID },
+    { ENV_WORLD, "GetLeader", &LuaGroup::GetLeader },
+    { ENV_WORLD, "GetGUID", &LuaGroup::GetGUID },
+    { ENV_WORLD, "GetMemberGroup", &LuaGroup::GetMemberGroup },                 // :GetMemberGroup(player) - Returns the player's subgroup ID
+    { ENV_WORLD, "GetMemberGUID", &LuaGroup::GetMemberGUID },                   // :GetMemberGUID("name") - Returns the member's GUID
+    { ENV_WORLD, "GetMembersCount", &LuaGroup::GetMembersCount },               // :GetMembersCount() - Returns the member count of the group
 
     // Setters
-    { ENV_GLOBAL, "SetLeader", &LuaGroup::ChangeLeader },                       // :SetLeader(Player) - Sets the player as the new leader
-    { ENV_GLOBAL, "SetMembersGroup", &LuaGroup::ChangeMembersGroup },           // :ChangeMembersGroup(player, subGroup) - Changes the member's subgroup
-    { ENV_GLOBAL, "SetTargetIcon", &LuaGroup::SetTargetIcon },                  // :SetTargetIcon(icon, targetguid[, setterguid]) - Sets target's icon for group. target 0 to clear.
+    { ENV_WORLD, "SetLeader", &LuaGroup::ChangeLeader },                        // :SetLeader(Player) - Sets the player as the new leader
+    { ENV_WORLD, "SetMembersGroup", &LuaGroup::ChangeMembersGroup },            // :ChangeMembersGroup(player, subGroup) - Changes the member's subgroup
+    { ENV_WORLD, "SetTargetIcon", &LuaGroup::SetTargetIcon },                   // :SetTargetIcon(icon, targetguid[, setterguid]) - Sets target's icon for group. target 0 to clear.
 
     // Boolean
-    { ENV_GLOBAL, "IsLeader", &LuaGroup::IsLeader },                            // :IsLeader(GUID)
-    { ENV_GLOBAL, "AddInvite", &LuaGroup::AddInvite },                          // :AddInvite(player) - Adds a an invite to player. Returns true if succesful
-    { ENV_GLOBAL, "RemoveMember", &LuaGroup::RemoveMember },                    // :RemoveMember(player) - Removes player from group. Returns true on success
-    { ENV_GLOBAL, "Disband", &LuaGroup::Disband },                              // :Disband() - Disbands the group
-    { ENV_GLOBAL, "IsFull", &LuaGroup::IsFull },                                // :IsFull() - Returns true if the group is full
-    // { ENV_GLOBAL, "IsLFGGroup", &LuaGroup::isLFGGroup},                      // :IsLFGGroup() - Returns true if the group is an LFG group
-    { ENV_GLOBAL, "IsRaidGroup", &LuaGroup::isRaidGroup },                      // :IsRaidGroup() - Returns true if the group is a raid group
-    { ENV_GLOBAL, "IsBGGroup", &LuaGroup::isBGGroup },                          // :IsBGGroup() - Returns true if the group is a battleground group
-    // { ENV_GLOBAL, "IsBFGroup", &LuaGroup::isBFGroup},                        // :IsBFGroup() - Returns true if the group is a battlefield group
-    { ENV_GLOBAL, "IsMember", &LuaGroup::IsMember },                            // :IsMember(player) - Returns true if the player is a member of the group
-    { ENV_GLOBAL, "IsAssistant", &LuaGroup::IsAssistant },                      // :IsAssistant(player) - returns true if the player is an assistant in the group
-    { ENV_GLOBAL, "SameSubGroup", &LuaGroup::SameSubGroup },                    // :SameSubGroup(player1, player2) - Returns true if the players are in the same subgroup in the group
-    { ENV_GLOBAL, "HasFreeSlotSubGroup", &LuaGroup::HasFreeSlotSubGroup },      // :HasFreeSlotSubGroup(subGroup) - Returns true if the subgroupID has free slots
+    { ENV_WORLD, "IsLeader", &LuaGroup::IsLeader },                             // :IsLeader(GUID)
+    { ENV_WORLD, "AddInvite", &LuaGroup::AddInvite },                           // :AddInvite(player) - Adds a an invite to player. Returns true if succesful
+    { ENV_WORLD, "RemoveMember", &LuaGroup::RemoveMember },                     // :RemoveMember(player) - Removes player from group. Returns true on success
+    { ENV_WORLD, "Disband", &LuaGroup::Disband },                               // :Disband() - Disbands the group
+    { ENV_WORLD, "IsFull", &LuaGroup::IsFull },                                 // :IsFull() - Returns true if the group is full
+    // { ENV_WORLD, "IsLFGGroup", &LuaGroup::isLFGGroup},                       // :IsLFGGroup() - Returns true if the group is an LFG group
+    { ENV_WORLD, "IsRaidGroup", &LuaGroup::isRaidGroup },                       // :IsRaidGroup() - Returns true if the group is a raid group
+    { ENV_WORLD, "IsBGGroup", &LuaGroup::isBGGroup },                           // :IsBGGroup() - Returns true if the group is a battleground group
+    // { ENV_WORLD, "IsBFGroup", &LuaGroup::isBFGroup},                         // :IsBFGroup() - Returns true if the group is a battlefield group
+    { ENV_WORLD, "IsMember", &LuaGroup::IsMember },                             // :IsMember(player) - Returns true if the player is a member of the group
+    { ENV_WORLD, "IsAssistant", &LuaGroup::IsAssistant },                       // :IsAssistant(player) - returns true if the player is an assistant in the group
+    { ENV_WORLD, "SameSubGroup", &LuaGroup::SameSubGroup },                     // :SameSubGroup(player1, player2) - Returns true if the players are in the same subgroup in the group
+    { ENV_WORLD, "HasFreeSlotSubGroup", &LuaGroup::HasFreeSlotSubGroup },       // :HasFreeSlotSubGroup(subGroup) - Returns true if the subgroupID has free slots
 
     // Other
-    { ENV_GLOBAL, "SendPacket", &LuaGroup::SendPacket },                        // :SendPacket(packet, sendToPlayersInBattleground[, ignoreguid]) - Sends a specified packet to the group with the choice (true/false) to send it to players in a battleground. Optionally ignores given player guid
+    { ENV_WORLD, "SendPacket", &LuaGroup::SendPacket },                         // :SendPacket(packet, sendToPlayersInBattleground[, ignoreguid]) - Sends a specified packet to the group with the choice (true/false) to send it to players in a battleground. Optionally ignores given player guid
     // { ENV_GLOBAL, "ConvertToLFG", &LuaGroup::ConvertToLFG},                  // :ConvertToLFG() - Converts the group to an LFG group
-    { ENV_GLOBAL, "ConvertToRaid", &LuaGroup::ConvertToRaid },                  // :ConvertToRaid() - Converts the group to a raid group
+    { ENV_WORLD, "ConvertToRaid", &LuaGroup::ConvertToRaid },                   // :ConvertToRaid() - Converts the group to a raid group
 
     { ENV_NONE, NULL, NULL }
 };
@@ -1011,36 +1008,36 @@ ElunaMethods<Group> GroupMethods[] =
 ElunaMethods<Guild> GuildMethods[] =
 {
     // Getters
-    { ENV_GLOBAL, "GetMembers", &LuaGuild::GetMembers },                    // :GetMembers() - returns a table containing the players in this guild. (Online?)
-    { ENV_GLOBAL, "GetLeader", &LuaGuild::GetLeader },                      // :GetLeader() - Returns the guild learder's object
-    { ENV_GLOBAL, "GetLeaderGUID", &LuaGuild::GetLeaderGUID },              // :GetLeaderGUID() - Returns the guild learder's guid
-    { ENV_GLOBAL, "GetId", &LuaGuild::GetId },                              // :GetId() - Gets the guild's ID
-    { ENV_GLOBAL, "GetName", &LuaGuild::GetName },                          // :GetName() - Gets the guild name
-    { ENV_GLOBAL, "GetMOTD", &LuaGuild::GetMOTD },                          // :GetMOTD() - Gets the guild MOTD string
-    { ENV_GLOBAL, "GetInfo", &LuaGuild::GetInfo },                          // :GetInfo() - Gets the guild info string
-    { ENV_GLOBAL, "GetMemberCount", &LuaGuild::GetMemberCount },            // :GetMemberCount() - Returns the amount of players in the guild
+    { ENV_WORLD, "GetMembers", &LuaGuild::GetMembers },                    // :GetMembers() - returns a table containing the players in this guild. (Online?)
+    { ENV_WORLD, "GetLeader", &LuaGuild::GetLeader },                      // :GetLeader() - Returns the guild learder's object
+    { ENV_WORLD, "GetLeaderGUID", &LuaGuild::GetLeaderGUID },              // :GetLeaderGUID() - Returns the guild learder's guid
+    { ENV_WORLD, "GetId", &LuaGuild::GetId },                              // :GetId() - Gets the guild's ID
+    { ENV_WORLD, "GetName", &LuaGuild::GetName },                          // :GetName() - Gets the guild name
+    { ENV_WORLD, "GetMOTD", &LuaGuild::GetMOTD },                          // :GetMOTD() - Gets the guild MOTD string
+    { ENV_WORLD, "GetInfo", &LuaGuild::GetInfo },                          // :GetInfo() - Gets the guild info string
+    { ENV_WORLD, "GetMemberCount", &LuaGuild::GetMemberCount },            // :GetMemberCount() - Returns the amount of players in the guild
 
     // Setters
 #ifndef CLASSIC
-    { ENV_GLOBAL, "SetBankTabText", &LuaGuild::SetBankTabText },            // :SetBankTabText(tabId, text)
+    { ENV_WORLD, "SetBankTabText", &LuaGuild::SetBankTabText },            // :SetBankTabText(tabId, text)
 #endif
-    { ENV_GLOBAL, "SetMemberRank", &LuaGuild::ChangeMemberRank },           // :SetMemberRank(player, newRank) - Sets the player rank in the guild to the new rank
+    { ENV_WORLD, "SetMemberRank", &LuaGuild::ChangeMemberRank },           // :SetMemberRank(player, newRank) - Sets the player rank in the guild to the new rank
 #ifndef CATA
-    { ENV_GLOBAL, "SetLeader", &LuaGuild::SetLeader },                      // :SetLeader() - Sets the guild's leader
+    { ENV_WORLD, "SetLeader", &LuaGuild::SetLeader },                      // :SetLeader() - Sets the guild's leader
 #endif
 
     // Boolean
 
     // Other
-    { ENV_GLOBAL, "ChangeMemberRank", &LuaGuild::ChangeMemberRank },        // :ChangeMemberRank(player, rankId) - Changes players rank to rank specified
-    { ENV_GLOBAL, "SendPacket", &LuaGuild::SendPacket },                    // :SendPacket(packet) - sends packet to guild
-    { ENV_GLOBAL, "SendPacketToRanked", &LuaGuild::SendPacketToRanked },    // :SendPacketToRanked(packet, rankId) - sends packet to guild, specifying a rankId will only send the packet to your ranked members
-    { ENV_GLOBAL, "Disband", &LuaGuild::Disband },                          // :Disband() - Disbands the guild
-    { ENV_GLOBAL, "AddMember", &LuaGuild::AddMember },                      // :AddMember(player, rank) - adds the player to the guild. Rank is optional
-    { ENV_GLOBAL, "DeleteMember", &LuaGuild::DeleteMember },                // :DeleteMember(player, disbanding, kicked) - Deletes the player from the guild. Disbanding and kicked are optional bools
+    { ENV_WORLD, "ChangeMemberRank", &LuaGuild::ChangeMemberRank },        // :ChangeMemberRank(player, rankId) - Changes players rank to rank specified
+    { ENV_WORLD, "SendPacket", &LuaGuild::SendPacket },                    // :SendPacket(packet) - sends packet to guild
+    { ENV_WORLD, "SendPacketToRanked", &LuaGuild::SendPacketToRanked },    // :SendPacketToRanked(packet, rankId) - sends packet to guild, specifying a rankId will only send the packet to your ranked members
+    { ENV_WORLD, "Disband", &LuaGuild::Disband },                          // :Disband() - Disbands the guild
+    { ENV_WORLD, "AddMember", &LuaGuild::AddMember },                      // :AddMember(player, rank) - adds the player to the guild. Rank is optional
+    { ENV_WORLD, "DeleteMember", &LuaGuild::DeleteMember },                // :DeleteMember(player, disbanding, kicked) - Deletes the player from the guild. Disbanding and kicked are optional bools
 #ifndef CLASSIC
-    { ENV_GLOBAL, "DepositBankMoney", &LuaGuild::DepositBankMoney },        // :DepositBankMoney(money) - Deposits money into the guild bank
-    { ENV_GLOBAL, "WithdrawBankMoney", &LuaGuild::WithdrawBankMoney },      // :WithdrawBankMoney(money) - Withdraws money from the guild bank
+    { ENV_WORLD, "DepositBankMoney", &LuaGuild::DepositBankMoney },        // :DepositBankMoney(money) - Deposits money into the guild bank
+    { ENV_WORLD, "WithdrawBankMoney", &LuaGuild::WithdrawBankMoney },      // :WithdrawBankMoney(money) - Withdraws money from the guild bank
 #endif
 
     { ENV_NONE, NULL, NULL }

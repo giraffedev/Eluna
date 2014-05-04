@@ -93,13 +93,5 @@ namespace LuaQuest
     Eluna::Push(L, quest->GetMaxLevel());
     return 1;
     }*/
-
-    /* SETTERS */
-    int SetFlag(lua_State* L, Quest* quest)
-    {
-        uint32 flag = Eluna::CHECKVAL<uint32>(L, 2);
-        quest->SetSpecialFlag((QuestSpecialFlags)flag);
-        return 0;
-    }
 };
 #endif

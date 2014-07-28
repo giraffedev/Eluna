@@ -26,7 +26,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/dep/SFMT
   ${CMAKE_SOURCE_DIR}/dep/mersennetwister
   ${CMAKE_SOURCE_DIR}/dep/zlib
-  ${CMAKE_SOURCE_DIR}/dep/lualib
+  ${CMAKE_SOURCE_DIR}/dep/lualib/src
   ${CMAKE_SOURCE_DIR}/src/server/shared
   ${CMAKE_SOURCE_DIR}/src/server/shared/Configuration
   ${CMAKE_SOURCE_DIR}/src/server/shared/Cryptography
@@ -145,6 +145,16 @@ if( WIN32 )
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/lua_scripts/extensions/
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/extensions ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/lua_scripts/extensions/
+    )
+    # Build LuaJIT
+    add_custom_command(TARGET LuaEngine
+      PRE_BUILD
+      COMMAND cd \"${CMAKE_SOURCE_DIR}/dep/lualib/src/\"
+      COMMAND call msvcbuild
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/lua51.lib ${CMAKE_BINARY_DIR}/dep/lualib/Debug
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/lua51.dll ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/luajit.exe ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
+      # COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/luajit.bat \"$(VCInstallDir)\" \"${CMAKE_CURRENT_SOURCE_DIR}\"
     )
   elseif ( MINGW )
     add_custom_command(TARGET LuaEngine

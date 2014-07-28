@@ -272,7 +272,8 @@ void Eluna::RunScripts()
     scripts.insert(scripts.end(), lua_scripts.begin(), lua_scripts.end());
 
     lua_getglobal(L, "package");
-    luaL_getsubtable(L, -1, "loaded");
+    lua_pushstring(L, "loaded");
+    lua_gettable(L, -2);
     int modules = lua_gettop(L);
     for (ScriptList::const_iterator it = scripts.begin(); it != scripts.end(); ++it)
     {
@@ -359,7 +360,7 @@ void Eluna::Push(lua_State* L, const int64 l)
 }
 void Eluna::Push(lua_State* L, const uint32 u)
 {
-    lua_pushunsigned(L, u);
+    lua_pushnumber(L, u);
 }
 void Eluna::Push(lua_State* L, const int32 i)
 {
@@ -502,13 +503,13 @@ template<> int8 Eluna::CHECKVAL<int8>(lua_State* L, int narg, int8 def)
 }
 template<> uint8 Eluna::CHECKVAL<uint8>(lua_State* L, int narg)
 {
-    return luaL_checkunsigned(L, narg);
+    return luaL_checknumber(L, narg);
 }
 template<> uint8 Eluna::CHECKVAL<uint8>(lua_State* L, int narg, uint8 def)
 {
     if (lua_isnoneornil(L, narg) || !lua_isnumber(L, narg))
         return def;
-    return luaL_optunsigned(L, narg, def);
+    return luaL_optnumber(L, narg, def);
 }
 template<> int16 Eluna::CHECKVAL<int16>(lua_State* L, int narg)
 {
@@ -522,23 +523,23 @@ template<> int16 Eluna::CHECKVAL<int16>(lua_State* L, int narg, int16 def)
 }
 template<> uint16 Eluna::CHECKVAL<uint16>(lua_State* L, int narg)
 {
-    return luaL_checkunsigned(L, narg);
+    return luaL_checknumber(L, narg);
 }
 template<> uint16 Eluna::CHECKVAL<uint16>(lua_State* L, int narg, uint16 def)
 {
     if (lua_isnoneornil(L, narg) || !lua_isnumber(L, narg))
         return def;
-    return luaL_optunsigned(L, narg, def);
+    return luaL_optnumber(L, narg, def);
 }
 template<> uint32 Eluna::CHECKVAL<uint32>(lua_State* L, int narg)
 {
-    return luaL_checkunsigned(L, narg);
+    return luaL_checknumber(L, narg);
 }
 template<> uint32 Eluna::CHECKVAL<uint32>(lua_State* L, int narg, uint32 def)
 {
     if (lua_isnoneornil(L, narg) || !lua_isnumber(L, narg))
         return def;
-    return luaL_optunsigned(L, narg, def);
+    return luaL_optnumber(L, narg, def);
 }
 template<> int32 Eluna::CHECKVAL<int32>(lua_State* L, int narg)
 {

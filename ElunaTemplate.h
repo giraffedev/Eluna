@@ -123,8 +123,8 @@ public:
         if (!manageMemory)
             return 0;
 
-        // Get object pointer (and check type, no error)
-        T** ptrHold = static_cast<T**>(luaL_testudata(L, -1, tname));
+        // Get object pointer (and check type)
+        T** ptrHold = static_cast<T**>(luaL_checkudata(L, -1, tname));
         if (ptrHold)
             delete *ptrHold;
         return 0;

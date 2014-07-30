@@ -150,9 +150,9 @@ if( WIN32 )
     add_custom_command(TARGET LuaEngine
       PRE_BUILD
       COMMAND cd \"${CMAKE_SOURCE_DIR}/dep/lualib/src/\"
-      COMMAND call msvcbuild
+      COMMAND call msvcbuild static
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/lua51.lib ${CMAKE_BINARY_DIR}/dep/lualib/Debug
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/lua51.dll ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
+      # COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/lua51.dll ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/luajit.exe ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
       # COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/luajit.bat \"$(VCInstallDir)\" \"${CMAKE_CURRENT_SOURCE_DIR}\"
     )

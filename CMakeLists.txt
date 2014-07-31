@@ -141,26 +141,52 @@ add_dependencies(LuaEngine game)
 
 if( WIN32 )
   if ( MSVC )
+    # Build LuaJIT
+    add_custom_command(TARGET LuaEngine
+      PRE_BUILD
+      COMMAND cd $(VSInstallDir)/VC
+      COMMAND if \"$(Platform)\"==\"Win32\" call vcvarsall x86
+      COMMAND if \"$(Platform)\"==\"Win32\" echo jit building 32bit
+      COMMAND if \"$(Platform)\"==\"Win64\" call vcvarsall x64
+      COMMAND if \"$(Platform)\"==\"Win64\" echo jit building 64bit
+      COMMAND cd ${CMAKE_SOURCE_DIR}/dep/lualib/src/
+      COMMAND call msvcbuild static
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/lua51.lib ${CMAKE_BINARY_DIR}/dep/lualib/$(ConfigurationName)/
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/luajit.exe ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
+    )
     add_custom_command(TARGET LuaEngine
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/lua_scripts/extensions/
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/extensions ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/lua_scripts/extensions/
     )
-    # Build LuaJIT
-    add_custom_command(TARGET LuaEngine
-      PRE_BUILD
-      COMMAND cd \"${CMAKE_SOURCE_DIR}/dep/lualib/src/\"
-      COMMAND call msvcbuild static
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/lua51.lib ${CMAKE_BINARY_DIR}/dep/lualib/$(ConfigurationName)/
-      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dep/lualib/src/luajit.exe ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
-    )
   elseif ( MINGW )
-    add_custom_command(TARGET LuaEngine
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin/lua_scripts/extensions/
-      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/extensions ${CMAKE_BINARY_DIR}/bin/lua_scripts/extensions/
-    )
+    message( FATAL_ERROR "Eluna does not support MINGW, use Visual Studio" )
   endif()
+else()
+  ExternalProject_Add(project_luajit
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/dep/lualib/src/
+    if( UNIX )
+      PREFIX bin
+    elseif( WIN32 )
+      PREFIX "${CMAKE_INSTALL_PREFIX}"
+    endif()
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND make
+    if( UNIX )
+      INSTALL_COMMAND make install PREFIX=bin
+    elseif( WIN32 )
+      INSTALL_COMMAND make install PREFIX="${CMAKE_INSTALL_PREFIX}"
+    endif()
+  )
+
+  ExternalProject_Get_Property(project_luajit install_dir)
+
+  add_library(luajit STATIC IMPORTED)
+  add_dependencies(luajit project_luajit)
+
+  # add_executable(game main.c)
+
+  target_link_libraries(game luajit)
 endif()
 
 if( UNIX )

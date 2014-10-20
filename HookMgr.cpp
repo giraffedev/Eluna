@@ -46,12 +46,12 @@ using namespace HookMgr;
 #define EVENT_BEGIN(BINDMAP, EVENT, RET) \
     if (!BINDMAP->HasEvents(EVENT)) \
         RET; \
-    lua_State* L = sEluna->L; \
-    const char* _LuaBindType = sEluna->BINDMAP->groupName; \
+    lua_State* L = this->L; \
+    const char* _LuaBindType = this->BINDMAP->groupName; \
     uint32 _LuaEvent = EVENT; \
     int _LuaStackTop = lua_gettop(L); \
-    for (size_t i = 0; i < sEluna->BINDMAP->Bindings[_LuaEvent].size(); ++i) \
-        lua_rawgeti(L, LUA_REGISTRYINDEX, (sEluna->BINDMAP->Bindings[_LuaEvent][i])); \
+    for (size_t i = 0; i < this->BINDMAP->Bindings[_LuaEvent].size(); ++i) \
+        lua_rawgeti(L, LUA_REGISTRYINDEX, (this->BINDMAP->Bindings[_LuaEvent][i])); \
     int _LuaFuncTop = lua_gettop(L); \
     int _LuaFuncCount = _LuaFuncTop-_LuaStackTop; \
     Eluna::Push(L, _LuaEvent);
@@ -78,11 +78,11 @@ using namespace HookMgr;
 
 // RET is a return statement
 #define ENTRY_BEGIN(BINDMAP, ENTRY, EVENT, RET) \
-    int _Luabind = sEluna->BINDMAP->GetBind(ENTRY, EVENT); \
+    int _Luabind = this->BINDMAP->GetBind(ENTRY, EVENT); \
     if (!_Luabind) \
         RET; \
-    lua_State* L = sEluna->L; \
-    const char* _LuaBindType = sEluna->BINDMAP->groupName; \
+    lua_State* L = this->L; \
+    const char* _LuaBindType = this->BINDMAP->groupName; \
     uint32 _LuaEvent = EVENT; \
     int _LuaStackTop = lua_gettop(L); \
     lua_rawgeti(L, LUA_REGISTRYINDEX, _Luabind); \

@@ -29,13 +29,16 @@ extern "C"
 Eluna::ScriptList Eluna::lua_scripts;
 Eluna::ScriptList Eluna::lua_extensions;
 std::string Eluna::lua_folderpath;
-Eluna* Eluna::GEluna = NULL;
+// Eluna* Eluna::GEluna = NULL;
 bool Eluna::reload = false;
+bool Eluna::initialized = false;
 
 extern void RegisterFunctions(lua_State* L);
 
 void Eluna::Initialize()
 {
+    ASSERT(!initialized);
+
     uint32 oldMSTime = ElunaUtil::GetCurrTime();
 
     lua_scripts.clear();
@@ -54,25 +57,31 @@ void Eluna::Initialize()
     ELUNA_LOG_DEBUG("[Eluna]: Loaded %u scripts in %u ms", uint32(lua_scripts.size() + lua_extensions.size()), ElunaUtil::GetTimeDiff(oldMSTime));
 
     // Create global eluna
-    new Eluna();
+    // new Eluna();
+    initialized = true;
 }
 
 void Eluna::Uninitialize()
 {
-    delete GEluna;
-    GEluna = NULL;
+    ASSERT(initialized);
+
+    // delete GEluna;
+    // GEluna = NULL;
     lua_scripts.clear();
     lua_extensions.clear();
+    initialized = false;
 }
 
 void Eluna::ReloadEluna()
 {
+    return;
+
     eWorld->SendServerMessage(SERVER_MSG_STRING, "Reloading Eluna...");
     Uninitialize();
     Initialize();
 
     // in multithread foreach: run scripts
-    sEluna->RunScripts();
+    // sEluna->RunScripts();
 
 #ifdef TRINITY
     // Re initialize creature AI restoring C++ AI or applying lua AI
@@ -89,6 +98,8 @@ void Eluna::ReloadEluna()
 
 Eluna::Eluna() :
 L(luaL_newstate()),
+
+event_level(0),
 
 eventMgr(NULL),
 
@@ -121,12 +132,15 @@ playerGossipBindings(new EntryBind<HookMgr::GossipEvents>("GossipEvents (player)
     userdata_table = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // Replace this with map insert if making multithread version
-    ASSERT(!Eluna::GEluna);
-    Eluna::GEluna = this;
+    // ASSERT(!Eluna::GEluna);
+    // Eluna::GEluna = this;
 
     // Set event manager. Must be after setting sEluna
     eventMgr = new EventMgr();
     eventMgr->globalProcessor = new ElunaEventProcessor(NULL);
+
+    // Run eluna scripts.
+    RunScripts();
 }
 
 Eluna::~Eluna()
@@ -134,9 +148,10 @@ Eluna::~Eluna()
     OnLuaStateClose();
 
     delete eventMgr;
+    eventMgr = NULL;
 
     // Replace this with map remove if making multithread version
-    Eluna::GEluna = NULL;
+    // Eluna::GEluna = NULL;
 
     delete ServerEventBindings;
     delete PlayerEventBindings;
@@ -153,6 +168,22 @@ Eluna::~Eluna()
     delete ItemGossipBindings;
     delete playerGossipBindings;
     delete BGEventBindings;
+    
+    ServerEventBindings = NULL;
+    PlayerEventBindings = NULL;
+    GuildEventBindings = NULL;
+    GroupEventBindings = NULL;
+    VehicleEventBindings = NULL;
+
+    PacketEventBindings = NULL;
+    CreatureEventBindings = NULL;
+    CreatureGossipBindings = NULL;
+    GameObjectEventBindings = NULL;
+    GameObjectGossipBindings = NULL;
+    ItemEventBindings = NULL;
+    ItemGossipBindings = NULL;
+    playerGossipBindings = NULL;
+    BGEventBindings = NULL;
 
     // Must close lua state after deleting stores and mgr
     lua_close(L);
@@ -329,7 +360,7 @@ void Eluna::report(lua_State* L)
     lua_pop(L, 1);
 }
 
-void Eluna::ExecuteCall(lua_State* L, int params, int res)
+void Eluna::ExecuteCall(int params, int res)
 {
     int top = lua_gettop(L);
     int type = lua_type(L, top - params);
@@ -341,8 +372,12 @@ void Eluna::ExecuteCall(lua_State* L, int params, int res)
         return;
     }
 
+    ++event_level;
     if (lua_pcall(L, params, res, 0))
         report(L);
+    --event_level;
+    if (!event_level)
+        InvalidateObjects();
 }
 
 void Eluna::Push(lua_State* L)

@@ -107,11 +107,13 @@ private:
 public:
     typedef std::list<LuaScript> ScriptList;
 
-    static Eluna* GEluna;
+    // static Eluna* GEluna;
     static bool reload;
+    static bool initialized;
 
     lua_State* L;
     int userdata_table;
+    uint32 event_level;
 
     EventMgr* eventMgr;
 
@@ -146,10 +148,10 @@ public:
     static void AddScriptPath(std::string filename, std::string fullpath, ScriptList& scripts);
 
     static void report(lua_State*);
-    static void ExecuteCall(lua_State* L, int params, int res);
+    void ExecuteCall(int params, int res);
     void Register(uint8 reg, uint32 id, uint32 evt, int func);
     void RunScripts();
-    static void RemoveRef(const void* obj);
+    // static void RemoveRef(const void* obj);
 
     // Pushes
     static void Push(lua_State*); // nil
@@ -361,6 +363,6 @@ template<> Creature* Eluna::CHECKOBJ<Creature>(lua_State* L, int narg, bool erro
 template<> GameObject* Eluna::CHECKOBJ<GameObject>(lua_State* L, int narg, bool error);
 template<> Corpse* Eluna::CHECKOBJ<Corpse>(lua_State* L, int narg, bool error);
 
-#define sEluna Eluna::GEluna
+// #define sEluna Eluna::GEluna
 
 #endif

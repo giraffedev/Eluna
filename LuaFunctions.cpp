@@ -38,85 +38,87 @@ extern "C"
 #include "VehicleMethods.h"
 #include "BattleGroundMethods.h"
 
-void RegisterGlobals(lua_State* L)
+ElunaGlobal::ElunaRegister GlobalMethods[] =
 {
     // Hooks
-    lua_register(L, "RegisterPacketEvent", &LuaGlobalFunctions::RegisterPacketEvent);                       // RegisterPacketEvent(opcodeID, event, function)
-    lua_register(L, "RegisterServerEvent", &LuaGlobalFunctions::RegisterServerEvent);                       // RegisterServerEvent(event, function)
-    lua_register(L, "RegisterPlayerEvent", &LuaGlobalFunctions::RegisterPlayerEvent);                       // RegisterPlayerEvent(event, function)
-    lua_register(L, "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent);                         // RegisterGuildEvent(event, function)
-    lua_register(L, "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent);                         // RegisterGroupEvent(event, function)
-    lua_register(L, "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent);                   // RegisterCreatureEvent(entry, event, function)
-    lua_register(L, "RegisterCreatureGossipEvent", &LuaGlobalFunctions::RegisterCreatureGossipEvent);       // RegisterCreatureGossipEvent(entry, event, function)
-    lua_register(L, "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent);               // RegisterGameObjectEvent(entry, event, function)
-    lua_register(L, "RegisterGameObjectGossipEvent", &LuaGlobalFunctions::RegisterGameObjectGossipEvent);   // RegisterGameObjectGossipEvent(entry, event, function)
-    lua_register(L, "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent);                           // RegisterItemEvent(entry, event, function)
-    lua_register(L, "RegisterItemGossipEvent", &LuaGlobalFunctions::RegisterItemGossipEvent);               // RegisterItemGossipEvent(entry, event, function)
-    lua_register(L, "RegisterPlayerGossipEvent", &LuaGlobalFunctions::RegisterPlayerGossipEvent);           // RegisterPlayerGossipEvent(menu_id, event, function)
-    lua_register(L, "RegisterBGEvent", &LuaGlobalFunctions::RegisterBGEvent);                               // RegisterBGEvent(event, function)
+    { "RegisterPacketEvent", &LuaGlobalFunctions::RegisterPacketEvent },                       // RegisterPacketEvent(opcodeID, event, function)
+    { "RegisterServerEvent", &LuaGlobalFunctions::RegisterServerEvent },                       // RegisterServerEvent(event, function)
+    { "RegisterPlayerEvent", &LuaGlobalFunctions::RegisterPlayerEvent },                       // RegisterPlayerEvent(event, function)
+    { "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent },                         // RegisterGuildEvent(event, function)
+    { "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent },                         // RegisterGroupEvent(event, function)
+    { "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent },                   // RegisterCreatureEvent(entry, event, function)
+    { "RegisterCreatureGossipEvent", &LuaGlobalFunctions::RegisterCreatureGossipEvent },       // RegisterCreatureGossipEvent(entry, event, function)
+    { "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent },               // RegisterGameObjectEvent(entry, event, function)
+    { "RegisterGameObjectGossipEvent", &LuaGlobalFunctions::RegisterGameObjectGossipEvent },   // RegisterGameObjectGossipEvent(entry, event, function)
+    { "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent },                           // RegisterItemEvent(entry, event, function)
+    { "RegisterItemGossipEvent", &LuaGlobalFunctions::RegisterItemGossipEvent },               // RegisterItemGossipEvent(entry, event, function)
+    { "RegisterPlayerGossipEvent", &LuaGlobalFunctions::RegisterPlayerGossipEvent },           // RegisterPlayerGossipEvent(menu_id, event, function)
+    { "RegisterBGEvent", &LuaGlobalFunctions::RegisterBGEvent },                               // RegisterBGEvent(event, function)
 
     // Getters
-    lua_register(L, "GetLuaEngine", &LuaGlobalFunctions::GetLuaEngine);
-    lua_register(L, "GetCoreName", &LuaGlobalFunctions::GetCoreName);
-    lua_register(L, "GetCoreVersion", &LuaGlobalFunctions::GetCoreVersion);
-    lua_register(L, "GetCoreExpansion", &LuaGlobalFunctions::GetCoreExpansion);
-    lua_register(L, "GetQuest", &LuaGlobalFunctions::GetQuest);
-    lua_register(L, "GetPlayerByGUID", &LuaGlobalFunctions::GetPlayerByGUID);
-    lua_register(L, "GetPlayerByName", &LuaGlobalFunctions::GetPlayerByName);
-    lua_register(L, "GetGameTime", &LuaGlobalFunctions::GetGameTime);
-    lua_register(L, "GetPlayersInWorld", &LuaGlobalFunctions::GetPlayersInWorld);
-    lua_register(L, "GetPlayersInMap", &LuaGlobalFunctions::GetPlayersInMap);
-    lua_register(L, "GetGuildByName", &LuaGlobalFunctions::GetGuildByName);
-    lua_register(L, "GetGuildByLeaderGUID", &LuaGlobalFunctions::GetGuildByLeaderGUID);
-    lua_register(L, "GetPlayerCount", &LuaGlobalFunctions::GetPlayerCount);
-    lua_register(L, "GetPlayerGUID", &LuaGlobalFunctions::GetPlayerGUID);
-    lua_register(L, "GetItemGUID", &LuaGlobalFunctions::GetItemGUID);
-    lua_register(L, "GetObjectGUID", &LuaGlobalFunctions::GetObjectGUID);
-    lua_register(L, "GetUnitGUID", &LuaGlobalFunctions::GetUnitGUID);
-    lua_register(L, "GetGUIDLow", &LuaGlobalFunctions::GetGUIDLow);
-    lua_register(L, "GetGUIDType", &LuaGlobalFunctions::GetGUIDType);
-    lua_register(L, "GetGUIDEntry", &LuaGlobalFunctions::GetGUIDEntry);
-    lua_register(L, "GetAreaName", &LuaGlobalFunctions::GetAreaName);
-    lua_register(L, "bit_not", &LuaGlobalFunctions::bit_not);
-    lua_register(L, "bit_xor", &LuaGlobalFunctions::bit_xor);
-    lua_register(L, "bit_rshift", &LuaGlobalFunctions::bit_rshift);
-    lua_register(L, "bit_lshift", &LuaGlobalFunctions::bit_lshift);
-    lua_register(L, "bit_or", &LuaGlobalFunctions::bit_or);
-    lua_register(L, "bit_and", &LuaGlobalFunctions::bit_and);
-    lua_register(L, "GetItemLink", &LuaGlobalFunctions::GetItemLink);
-    lua_register(L, "GetMapById", &LuaGlobalFunctions::GetMapById);
+    { "GetLuaEngine", &LuaGlobalFunctions::GetLuaEngine },
+    { "GetCoreName", &LuaGlobalFunctions::GetCoreName },
+    { "GetCoreVersion", &LuaGlobalFunctions::GetCoreVersion },
+    { "GetCoreExpansion", &LuaGlobalFunctions::GetCoreExpansion },
+    { "GetQuest", &LuaGlobalFunctions::GetQuest },
+    { "GetPlayerByGUID", &LuaGlobalFunctions::GetPlayerByGUID },
+    { "GetPlayerByName", &LuaGlobalFunctions::GetPlayerByName },
+    { "GetGameTime", &LuaGlobalFunctions::GetGameTime },
+    { "GetPlayersInWorld", &LuaGlobalFunctions::GetPlayersInWorld },
+    { "GetPlayersInMap", &LuaGlobalFunctions::GetPlayersInMap },
+    { "GetGuildByName", &LuaGlobalFunctions::GetGuildByName },
+    { "GetGuildByLeaderGUID", &LuaGlobalFunctions::GetGuildByLeaderGUID },
+    { "GetPlayerCount", &LuaGlobalFunctions::GetPlayerCount },
+    { "GetPlayerGUID", &LuaGlobalFunctions::GetPlayerGUID },
+    { "GetItemGUID", &LuaGlobalFunctions::GetItemGUID },
+    { "GetObjectGUID", &LuaGlobalFunctions::GetObjectGUID },
+    { "GetUnitGUID", &LuaGlobalFunctions::GetUnitGUID },
+    { "GetGUIDLow", &LuaGlobalFunctions::GetGUIDLow },
+    { "GetGUIDType", &LuaGlobalFunctions::GetGUIDType },
+    { "GetGUIDEntry", &LuaGlobalFunctions::GetGUIDEntry },
+    { "GetAreaName", &LuaGlobalFunctions::GetAreaName },
+    { "bit_not", &LuaGlobalFunctions::bit_not },
+    { "bit_xor", &LuaGlobalFunctions::bit_xor },
+    { "bit_rshift", &LuaGlobalFunctions::bit_rshift },
+    { "bit_lshift", &LuaGlobalFunctions::bit_lshift },
+    { "bit_or", &LuaGlobalFunctions::bit_or },
+    { "bit_and", &LuaGlobalFunctions::bit_and },
+    { "GetItemLink", &LuaGlobalFunctions::GetItemLink },
+    { "GetMapById", &LuaGlobalFunctions::GetMapById },
 
     // Other
-    lua_register(L, "ReloadEluna", &LuaGlobalFunctions::ReloadEluna);
-    lua_register(L, "SendWorldMessage", &LuaGlobalFunctions::SendWorldMessage);
-    lua_register(L, "WorldDBQuery", &LuaGlobalFunctions::WorldDBQuery);
-    lua_register(L, "WorldDBExecute", &LuaGlobalFunctions::WorldDBExecute);
-    lua_register(L, "CharDBQuery", &LuaGlobalFunctions::CharDBQuery);
-    lua_register(L, "CharDBExecute", &LuaGlobalFunctions::CharDBExecute);
-    lua_register(L, "AuthDBQuery", &LuaGlobalFunctions::AuthDBQuery);
-    lua_register(L, "AuthDBExecute", &LuaGlobalFunctions::AuthDBExecute);
-    lua_register(L, "CreateLuaEvent", &LuaGlobalFunctions::CreateLuaEvent);
-    lua_register(L, "RemoveEventById", &LuaGlobalFunctions::RemoveEventById);
-    lua_register(L, "RemoveEvents", &LuaGlobalFunctions::RemoveEvents);
-    lua_register(L, "PerformIngameSpawn", &LuaGlobalFunctions::PerformIngameSpawn);
-    lua_register(L, "CreatePacket", &LuaGlobalFunctions::CreatePacket);
-    lua_register(L, "AddVendorItem", &LuaGlobalFunctions::AddVendorItem);
-    lua_register(L, "VendorRemoveItem", &LuaGlobalFunctions::VendorRemoveItem);
-    lua_register(L, "VendorRemoveAllItems", &LuaGlobalFunctions::VendorRemoveAllItems);
-    lua_register(L, "Kick", &LuaGlobalFunctions::Kick);
-    lua_register(L, "Ban", &LuaGlobalFunctions::Ban);
-    lua_register(L, "SaveAllPlayers", &LuaGlobalFunctions::SaveAllPlayers);
-    lua_register(L, "SendMail", &LuaGlobalFunctions::SendMail);
-    lua_register(L, "AddTaxiPath", &LuaGlobalFunctions::AddTaxiPath);
-    lua_register(L, "AddCorpse", &LuaGlobalFunctions::AddCorpse);
-    lua_register(L, "RemoveCorpse", &LuaGlobalFunctions::RemoveCorpse);
-    lua_register(L, "ConvertCorpseForPlayer", &LuaGlobalFunctions::ConvertCorpseForPlayer);
-    lua_register(L, "RemoveOldCorpses", &LuaGlobalFunctions::RemoveOldCorpses);
-    lua_register(L, "FindWeather", &LuaGlobalFunctions::FindWeather);
-    lua_register(L, "AddWeather", &LuaGlobalFunctions::AddWeather);
-    lua_register(L, "RemoveWeather", &LuaGlobalFunctions::RemoveWeather);
-    lua_register(L, "SendFineWeatherToPlayer", &LuaGlobalFunctions::SendFineWeatherToPlayer);
-}
+    { "ReloadEluna", &LuaGlobalFunctions::ReloadEluna },
+    { "SendWorldMessage", &LuaGlobalFunctions::SendWorldMessage },
+    { "WorldDBQuery", &LuaGlobalFunctions::WorldDBQuery },
+    { "WorldDBExecute", &LuaGlobalFunctions::WorldDBExecute },
+    { "CharDBQuery", &LuaGlobalFunctions::CharDBQuery },
+    { "CharDBExecute", &LuaGlobalFunctions::CharDBExecute },
+    { "AuthDBQuery", &LuaGlobalFunctions::AuthDBQuery },
+    { "AuthDBExecute", &LuaGlobalFunctions::AuthDBExecute },
+    { "CreateLuaEvent", &LuaGlobalFunctions::CreateLuaEvent },
+    { "RemoveEventById", &LuaGlobalFunctions::RemoveEventById },
+    { "RemoveEvents", &LuaGlobalFunctions::RemoveEvents },
+    { "PerformIngameSpawn", &LuaGlobalFunctions::PerformIngameSpawn },
+    { "CreatePacket", &LuaGlobalFunctions::CreatePacket },
+    { "AddVendorItem", &LuaGlobalFunctions::AddVendorItem },
+    { "VendorRemoveItem", &LuaGlobalFunctions::VendorRemoveItem },
+    { "VendorRemoveAllItems", &LuaGlobalFunctions::VendorRemoveAllItems },
+    { "Kick", &LuaGlobalFunctions::Kick },
+    { "Ban", &LuaGlobalFunctions::Ban },
+    { "SaveAllPlayers", &LuaGlobalFunctions::SaveAllPlayers },
+    { "SendMail", &LuaGlobalFunctions::SendMail },
+    { "AddTaxiPath", &LuaGlobalFunctions::AddTaxiPath },
+    { "AddCorpse", &LuaGlobalFunctions::AddCorpse },
+    { "RemoveCorpse", &LuaGlobalFunctions::RemoveCorpse },
+    { "ConvertCorpseForPlayer", &LuaGlobalFunctions::ConvertCorpseForPlayer },
+    { "RemoveOldCorpses", &LuaGlobalFunctions::RemoveOldCorpses },
+    { "FindWeather", &LuaGlobalFunctions::FindWeather },
+    { "AddWeather", &LuaGlobalFunctions::AddWeather },
+    { "RemoveWeather", &LuaGlobalFunctions::RemoveWeather },
+    { "SendFineWeatherToPlayer", &LuaGlobalFunctions::SendFineWeatherToPlayer },
+
+    { NULL, NULL },
+};
 
 ElunaRegister<Object> ObjectMethods[] =
 {
@@ -1240,7 +1242,7 @@ template<> int ElunaTemplate<Vehicle>::gcT(lua_State* L)
     ASSERT(!manageMemory);
 
     // Get object pointer (and check type, no error)
-    ElunaObject<Vehicle>** ptrHold = static_cast<ElunaObject<Vehicle>**>(luaL_testudata(L, -1, tname));
+    ElunaObject** ptrHold = static_cast<ElunaObject**>(luaL_testudata(L, -1, tname));
     if (ptrHold)
     {
         delete *ptrHold;
@@ -1251,7 +1253,7 @@ template<> int ElunaTemplate<Vehicle>::gcT(lua_State* L)
 
 void RegisterFunctions(Eluna* E)
 {
-    RegisterGlobals(E->L);
+    ElunaGlobal::SetMethods(E, GlobalMethods);
 
     ElunaTemplate<Object>::Register(E, "Object");
     ElunaTemplate<Object>::SetMethods(E, ObjectMethods);

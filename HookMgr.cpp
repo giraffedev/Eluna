@@ -69,7 +69,7 @@ using namespace HookMgr;
     { \
         for (int i = 0; i <= _LuaParams; ++i) \
             lua_pushvalue(L, _LuaFuncTop+i); \
-        Eluna::ExecuteCall(L, _LuaParams, _LuaReturnValues); \
+        Eluna::ExecuteCall(_LuaParams, _LuaReturnValues); \
         lua_remove(L, _LuaFuncTop--); \
     } \
     for (int i = _LuaParams; i > 0; --i) \
@@ -93,7 +93,7 @@ using namespace HookMgr;
 #define ENTRY_EXECUTE(RETVALS) \
     int _LuaReturnValues = RETVALS; \
     int _LuaParams = lua_gettop(L) - _LuaStackTop - 1; \
-    Eluna::ExecuteCall(L, _LuaParams, _LuaReturnValues);
+    Eluna::ExecuteCall(_LuaParams, _LuaReturnValues);
 
 #define FOR_RETS(IT) \
     for (int IT = _LuaStackTop + 1; IT <= lua_gettop(L); ++IT)
@@ -341,13 +341,13 @@ void Eluna::OnShutdownCancel()
 
 void Eluna::OnWorldUpdate(uint32 diff)
 {
-    eventMgr->globalProcessor->Update(diff);
-
     if (reload)
     {
         ReloadEluna();
         return;
     }
+
+    eventMgr->globalProcessor->Update(diff);
 
     EVENT_BEGIN(ServerEventBindings, WORLD_EVENT_ON_UPDATE, return);
     Push(L, diff);
@@ -1320,6 +1320,7 @@ void Eluna::OnPlayerLeave(Map* map, Player* player)
 }
 void Eluna::OnUpdate(Map* map, uint32 diff)
 {
+    eventMgr->globalProcessor->Update(diff);
     EVENT_BEGIN(ServerEventBindings, MAP_EVENT_ON_UPDATE, return);
     Push(L, map);
     Push(L, diff);
@@ -1450,6 +1451,242 @@ void Eluna::OnRemoveFromWorld(Creature* creature)
     ENDCALL();
 }
 
+void Eluna::UpdateAI(Creature* me, const uint32 diff)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_AIUPDATE, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, diff);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+//Called for reaction at enter to combat if not in combat yet (enemy can be NULL)
+//Called at creature aggro either by MoveInLOS or Attack Start
+void Eluna::EnterCombat(Creature* me, Unit* target)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_ENTER_COMBAT, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, target);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called at any Damage from any attacker (before damage apply)
+void Eluna::DamageTaken(Creature* me, Unit* attacker, uint32& damage)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_DAMAGE_TAKEN, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, attacker);
+    Eluna::Push(L, damage);
+    ENTRY_EXECUTE(1);
+    FOR_RETS(i)
+    {
+        if (lua_isnumber(L, i))
+            damage = Eluna::CHECKVAL<uint32>(L, i, damage);
+    }
+    ENDCALL();
+}
+
+//Called at creature death
+void Eluna::JustDied(Creature* me, Unit* killer)
+{
+    On_Reset(me);
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_DIED, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, killer);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+//Called at creature killing another unit
+void Eluna::KilledUnit(Creature* me, Unit* victim)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_TARGET_DIED, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, victim);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when the creature summon successfully other creature
+void Eluna::JustSummoned(Creature* me, Creature* summon)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_JUST_SUMMONED_CREATURE, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, summon);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when a summoned creature is despawned
+void Eluna::SummonedCreatureDespawn(Creature* me, Creature* summon)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SUMMONED_CREATURE_DESPAWN, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, summon);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+//Called at waypoint reached or PointMovement end
+void Eluna::MovementInform(Creature* me, uint32 type, uint32 id)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_REACH_WP, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, type);
+    Eluna::Push(L, id);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called before EnterCombat even before the creature is in combat.
+void Eluna::AttackStart(Creature* me, Unit* target)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_PRE_COMBAT, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, target);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called for reaction at stopping attack at no attackers or targets
+void Eluna::EnterEvadeMode(Creature* me)
+{
+    On_Reset(me);
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_LEAVE_COMBAT, return);
+    Eluna::Push(L, me);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when the creature is target of hostile action: swing, hostile spell landed, fear/etc)
+void Eluna::AttackedBy(Creature* me, Unit* attacker)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_ATTACKED_AT, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, attacker);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when creature is spawned or respawned (for reseting variables)
+void Eluna::JustRespawned(Creature* me)
+{
+    On_Reset(me);
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SPAWN, return);
+    Eluna::Push(L, me);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called at reaching home after evade
+void Eluna::JustReachedHome(Creature* me)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_REACH_HOME, return);
+    Eluna::Push(L, me);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called at text emote receive from player
+void Eluna::ReceiveEmote(Creature* me, Player* player, uint32 emoteId)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_RECEIVE_EMOTE, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, player);
+    Eluna::Push(L, emoteId);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// called when the corpse of this creature gets removed
+void Eluna::CorpseRemoved(Creature* me, uint32& respawnDelay)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_CORPSE_REMOVED, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, respawnDelay);
+    ENTRY_EXECUTE(1);
+    FOR_RETS(i)
+    {
+        if (lua_isnumber(L, i))
+            respawnDelay = Eluna::CHECKVAL<uint32>(L, i, respawnDelay);
+    }
+    ENDCALL();
+}
+
+void Eluna::MoveInLineOfSight(Creature* me, Unit* who)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_MOVE_IN_LOS, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, who);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called on creature initial spawn, respawn, death, evade (leave combat)
+void Eluna::On_Reset(Creature* me) // Not an override, custom
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_RESET, return);
+    Eluna::Push(L, me);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when hit by a spell
+void Eluna::SpellHit(Creature* me, Unit* caster, SpellInfo const* spell)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_HIT_BY_SPELL, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, caster);
+    Eluna::Push(L, spell->Id); // Pass spell object?
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when spell hits a target
+void Eluna::SpellHitTarget(Creature* me, Unit* target, SpellInfo const* spell)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SPELL_HIT_TARGET, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, target);
+    Eluna::Push(L, spell->Id); // Pass spell object?
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+#ifdef TRINITY
+
+void Eluna::SummonedCreatureDies(Creature* me, Creature* summon, Unit* killer)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SUMMONED_CREATURE_DIED, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, summon);
+    Eluna::Push(L, killer);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when owner takes damage
+void Eluna::OwnerAttackedBy(Creature* me, Unit* attacker)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_OWNER_ATTACKED_AT, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, attacker);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+
+// Called when owner attacks something
+void Eluna::OwnerAttacked(Creature* me, Unit* target)
+{
+    ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_OWNER_ATTACKED, return);
+    Eluna::Push(L, me);
+    Eluna::Push(L, target);
+    ENTRY_EXECUTE(0);
+    ENDCALL();
+}
+#endif
+
 struct ElunaCreatureAI : ScriptedAI
 {
 #ifndef TRINITY
@@ -1476,11 +1713,8 @@ struct ElunaCreatureAI : ScriptedAI
         if (!me->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PASSIVE))
             ScriptedAI::UpdateAI(diff);
 #endif
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_AIUPDATE, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, diff);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+
+        me->GetMap()->eluna->UpdateAI(me, diff);
     }
 
     //Called for reaction at enter to combat if not in combat yet (enemy can be NULL)
@@ -1488,167 +1722,98 @@ struct ElunaCreatureAI : ScriptedAI
     void EnterCombat(Unit* target) override
     {
         ScriptedAI::EnterCombat(target);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_ENTER_COMBAT, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, target);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->EnterCombat(me, target);
     }
 
     // Called at any Damage from any attacker (before damage apply)
     void DamageTaken(Unit* attacker, uint32& damage) override
     {
         ScriptedAI::DamageTaken(attacker, damage);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_DAMAGE_TAKEN, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, attacker);
-        Eluna::Push(L, damage);
-        ENTRY_EXECUTE(1);
-        FOR_RETS(i)
-        {
-            if (lua_isnumber(L, i))
-                damage = Eluna::CHECKVAL<uint32>(L, i, damage);
-        }
-        ENDCALL();
+        me->GetMap()->eluna->DamageTaken(me, attacker, damage);
     }
 
     //Called at creature death
     void JustDied(Unit* killer) override
     {
         ScriptedAI::JustDied(killer);
-        On_Reset();
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_DIED, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, killer);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->JustDied(me, killer);
     }
 
     //Called at creature killing another unit
     void KilledUnit(Unit* victim) override
     {
         ScriptedAI::KilledUnit(victim);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_TARGET_DIED, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, victim);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->KilledUnit(me, victim);
     }
 
     // Called when the creature summon successfully other creature
     void JustSummoned(Creature* summon) override
     {
         ScriptedAI::JustSummoned(summon);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_JUST_SUMMONED_CREATURE, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, summon);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->JustSummoned(me, summon);
     }
 
     // Called when a summoned creature is despawned
     void SummonedCreatureDespawn(Creature* summon) override
     {
         ScriptedAI::SummonedCreatureDespawn(summon);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SUMMONED_CREATURE_DESPAWN, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, summon);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->SummonedCreatureDespawn(me, summon);
     }
 
     //Called at waypoint reached or PointMovement end
     void MovementInform(uint32 type, uint32 id) override
     {
         ScriptedAI::MovementInform(type, id);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_REACH_WP, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, type);
-        Eluna::Push(L, id);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->MovementInform(me, type, id);
     }
 
     // Called before EnterCombat even before the creature is in combat.
     void AttackStart(Unit* target) override
     {
         ScriptedAI::AttackStart(target);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_PRE_COMBAT, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, target);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->AttackStart(me, target);
     }
 
     // Called for reaction at stopping attack at no attackers or targets
     void EnterEvadeMode() override
     {
         ScriptedAI::EnterEvadeMode();
-        On_Reset();
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_LEAVE_COMBAT, return);
-        Eluna::Push(L, me);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->EnterEvadeMode(me);
     }
 
     // Called when the creature is target of hostile action: swing, hostile spell landed, fear/etc)
     void AttackedBy(Unit* attacker) override
     {
         ScriptedAI::AttackedBy(attacker);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_ATTACKED_AT, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, attacker);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->AttackedBy(me, attacker);
     }
 
     // Called when creature is spawned or respawned (for reseting variables)
     void JustRespawned() override
     {
         ScriptedAI::JustRespawned();
-        On_Reset();
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SPAWN, return);
-        Eluna::Push(L, me);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->JustRespawned(me);
     }
 
     // Called at reaching home after evade
     void JustReachedHome() override
     {
         ScriptedAI::JustReachedHome();
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_REACH_HOME, return);
-        Eluna::Push(L, me);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->JustReachedHome(me);
     }
 
     // Called at text emote receive from player
     void ReceiveEmote(Player* player, uint32 emoteId) override
     {
         ScriptedAI::ReceiveEmote(player, emoteId);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_RECEIVE_EMOTE, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, player);
-        Eluna::Push(L, emoteId);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->ReceiveEmote(me, player, emoteId);
     }
 
     // called when the corpse of this creature gets removed
     void CorpseRemoved(uint32& respawnDelay) override
     {
         ScriptedAI::CorpseRemoved(respawnDelay);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_CORPSE_REMOVED, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, respawnDelay);
-        ENTRY_EXECUTE(1);
-        FOR_RETS(i)
-        {
-            if (lua_isnumber(L, i))
-                respawnDelay = Eluna::CHECKVAL<uint32>(L, i, respawnDelay);
-        }
-        ENDCALL();
+        me->GetMap()->eluna->CorpseRemoved(me, respawnDelay);
     }
 
 #ifndef TRINITY
@@ -1662,44 +1827,21 @@ struct ElunaCreatureAI : ScriptedAI
     void MoveInLineOfSight(Unit* who) override
     {
         ScriptedAI::MoveInLineOfSight(who);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_MOVE_IN_LOS, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, who);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
-    }
-
-    // Called on creature initial spawn, respawn, death, evade (leave combat)
-    void On_Reset() // Not an override, custom
-    {
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_RESET, return);
-        Eluna::Push(L, me);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->MoveInLineOfSight(me, who);
     }
 
     // Called when hit by a spell
     void SpellHit(Unit* caster, SpellInfo const* spell) override
     {
         ScriptedAI::SpellHit(caster, spell);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_HIT_BY_SPELL, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, caster);
-        Eluna::Push(L, spell->Id); // Pass spell object?
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->SpellHit(me, caster, spell);
     }
 
     // Called when spell hits a target
     void SpellHitTarget(Unit* target, SpellInfo const* spell) override
     {
         ScriptedAI::SpellHitTarget(target, spell);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SPELL_HIT_TARGET, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, target);
-        Eluna::Push(L, spell->Id); // Pass spell object?
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->SpellHitTarget(me, target, spell);
     }
 
 #ifdef TRINITY
@@ -1708,40 +1850,27 @@ struct ElunaCreatureAI : ScriptedAI
     void IsSummonedBy(Unit* summoner) override
     {
         ScriptedAI::IsSummonedBy(summoner);
-        sEluna->OnSummoned(me, summoner);
+        me->GetMap()->eluna->OnSummoned(me, summoner);
     }
 
     void SummonedCreatureDies(Creature* summon, Unit* killer) override
     {
         ScriptedAI::SummonedCreatureDies(summon, killer);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_SUMMONED_CREATURE_DIED, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, summon);
-        Eluna::Push(L, killer);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->SummonedCreatureDies(me, summon, killer);
     }
 
     // Called when owner takes damage
     void OwnerAttackedBy(Unit* attacker) override
     {
         ScriptedAI::OwnerAttackedBy(attacker);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_OWNER_ATTACKED_AT, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, attacker);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->OwnerAttackedBy(me, attacker);
     }
 
     // Called when owner attacks something
     void OwnerAttacked(Unit* target) override
     {
         ScriptedAI::OwnerAttacked(target);
-        ENTRY_BEGIN(CreatureEventBindings, me->GetEntry(), CREATURE_EVENT_ON_OWNER_ATTACKED, return);
-        Eluna::Push(L, me);
-        Eluna::Push(L, target);
-        ENTRY_EXECUTE(0);
-        ENDCALL();
+        me->GetMap()->eluna->OwnerAttacked(me, target);
     }
 #endif
 

@@ -16,27 +16,74 @@ extern "C"
 #include "LuaEngine.h"
 #include "ElunaUtility.h"
 
-template<typename T>
-struct ElunaRegister
+class ElunaGlobal
 {
-    const char* name;
-    int(*mfunc)(lua_State*, T*);
+public:
+    struct ElunaRegister
+    {
+        const char* name;
+        int(*mfunc)(Eluna*);
+    };
+
+    static int thunk(lua_State* L)
+    {
+        ElunaRegister* l = static_cast<ElunaRegister*>(lua_touserdata(L, lua_upvalueindex(1)));
+        Eluna* E = static_cast<Eluna*>(lua_touserdata(L, lua_upvalueindex(2)));
+        int args = lua_gettop(L);
+        int expected = l->mfunc(E);
+        args = lua_gettop(L) - args;
+        if (args < 0 || args > expected) // Assert instead?
+        {
+            ELUNA_LOG_ERROR("[Eluna]: %s returned unexpected amount of arguments %i out of %i. Report to devs", l->name, args, expected);
+        }
+        for (; args < expected; ++args)
+            lua_pushnil(L);
+        return expected;
+    }
+
+    static void SetMethods(Eluna* E, ElunaRegister* methodTable)
+    {
+        if (!methodTable)
+            return;
+
+        lua_pushglobaltable(E->L);
+
+        for (; methodTable && methodTable->name && methodTable->mfunc; ++methodTable)
+        {
+            lua_pushstring(E->L, methodTable->name);
+            lua_pushlightuserdata(E->L, (void*)methodTable);
+            lua_pushlightuserdata(E->L, (void*)E);
+            lua_pushcclosure(E->L, thunk, 2);
+            lua_settable(E->L, -3);
+        }
+
+        lua_remove(E->L, -1);
+    }
 };
 
-template<typename T>
 class ElunaObject
 {
 public:
-    ElunaObject(T* obj, bool manageMemory) : _isvalid(true), _invalidate(!manageMemory), object(obj) { }
-    
-    T* GetObj() const { return object; }
+    ElunaObject(void* obj, bool manageMemory) : _isvalid(false), _invalidate(!manageMemory), object(obj)
+    {
+        SetValid(true);
+    }
+
+    ~ElunaObject()
+    {
+    }
+
+    void* GetObj() const { return object; }
     bool IsValid() const { return _isvalid; }
     bool CanInvalidate() const { return _invalidate; }
 
-    
-    void SetObj(T* obj)
+    void SetObj(void* obj)
     {
         object = obj;
+    }
+    void SetValid(bool valid)
+    {
+        _isvalid = object && valid;
     }
     void SetValidation(bool invalidate)
     {
@@ -44,14 +91,21 @@ public:
     }
     void Invalidate()
     {
-        if (_invalidate)
+        if (CanInvalidate())
             _isvalid = false;
     }
 
 private:
     bool _isvalid;
     bool _invalidate;
-    T* object;
+    void* object;
+};
+
+template<typename T>
+struct ElunaRegister
+{
+    const char* name;
+    int(*mfunc)(Eluna*, T*);
 };
 
 template<typename T>
@@ -60,12 +114,6 @@ class ElunaTemplate
 public:
     static const char* tname;
     static bool manageMemory;
-
-    static int typeT(lua_State* L)
-    {
-        lua_pushstring(L, tname);
-        return 1;
-    }
 
     // name will be used as type name
     // If gc is true, lua will handle the memory management for object pushed
@@ -151,20 +199,6 @@ public:
         lua_remove(E->L, -1);
     }
 
-    // Remember special case ElunaTemplate<Vehicle>::gcT
-    static int gcT(lua_State* L)
-    {
-        // Get object pointer (and check type, no error)
-        ElunaObject<T> const** ptrHold = static_cast<ElunaObject<T> const**>(luaL_testudata(L, -1, tname));
-        if (ptrHold)
-        {
-            if (manageMemory)
-                delete (*ptrHold)->GetObj();
-            delete *ptrHold;
-        }
-        return 0;
-    }
-
     static int push(lua_State* L, T const* obj)
     {
         if (!obj)
@@ -175,12 +209,18 @@ public:
 
         //if (!manageMemory)
         //{
-            lua_rawgeti(L, LUA_REGISTRYINDEX, sEluna->userdata_table);
+            lua_getglobal(L, ELUNA_OBJECT_STORE);
+            ASSERT(lua_istable(L, -1));
             lua_pushfstring(L, "%p", obj);
             lua_gettable(L, -2);
             if (!lua_isnoneornil(L, -1) && luaL_checkudata(L, -1, tname))
             {
+                // remove userdata_table, leave userdata
                 lua_remove(L, -2);
+
+                // set userdata valid
+                if (ElunaObject* elunaObj = Eluna::CHECKOBJ<ElunaObject>(L, -1, false))
+                    elunaObj->SetValid(true);
                 return 1;
             }
             lua_remove(L, -1);
@@ -188,7 +228,7 @@ public:
         //}
 
         // Create new userdata
-        ElunaObject<T> const** ptrHold = static_cast<ElunaObject<T> const**>(lua_newuserdata(L, sizeof(ElunaObject<T> const*)));
+        ElunaObject** ptrHold = static_cast<ElunaObject**>(lua_newuserdata(L, sizeof(ElunaObject*)));
         if (!ptrHold)
         {
             ELUNA_LOG_ERROR("%s could not create new userdata", tname);
@@ -196,7 +236,7 @@ public:
             lua_pushnil(L);
             return 1;
         }
-        *ptrHold = new ElunaObject(obj, manageMemory);
+        *ptrHold = new ElunaObject((void*)(obj), manageMemory);
 
         // Set metatable for it
         luaL_getmetatable(L, tname);
@@ -221,17 +261,10 @@ public:
 
     static T* check(lua_State* L, int narg, bool error = true)
     {
-        ElunaObject<T> const** ptrHold = static_cast<ElunaObject<T> const**>(lua_touserdata(L, narg));
-        if (!ptrHold)
-        {
-            if (error)
-            {
-                char buff[256];
-                snprintf(buff, 256, "%s expected, got %s", tname, luaL_typename(L, narg));
-                luaL_argerror(L, narg, buff);
-            }
+        ElunaObject* elunaObj = Eluna::CHECKOBJ<ElunaObject>(L, narg, error);
+
+        if (!elunaObj)
             return NULL;
-        }
 
         //if (!manageMemory)
         //{
@@ -258,7 +291,7 @@ public:
         //    }
         //}
 
-        if (!(*ptrHold)->IsValid())
+        if (!elunaObj->IsValid())
         {
             char buff[256];
             snprintf(buff, 256, "%s expected, got pointer to nonexisting object (%s). This should never happen", tname, luaL_typename(L, narg));
@@ -272,7 +305,27 @@ public:
             }
             return NULL;
         }
-        return (*ptrHold)->GetObj();
+        return static_cast<T*>(elunaObj->GetObj());
+    }
+
+    static int typeT(lua_State* L)
+    {
+        lua_pushstring(L, tname);
+        return 1;
+    }
+
+    // Remember special case ElunaTemplate<Vehicle>::gcT
+    static int gcT(lua_State* L)
+    {
+        // Get object pointer (and check type, no error)
+        ElunaObject** ptrHold = static_cast<ElunaObject**>(luaL_testudata(L, -1, tname));
+        if (ptrHold)
+        {
+            if (manageMemory)
+                delete static_cast<T*>((*ptrHold)->GetObj());
+            delete *ptrHold;
+        }
+        return 0;
     }
 
     static int thunk(lua_State* L)
@@ -281,7 +334,7 @@ public:
         if (!obj)
             return 0;
         ElunaRegister<T>* l = static_cast<ElunaRegister<T>*>(lua_touserdata(L, lua_upvalueindex(1)));
-        // Eluna* E = static_cast<Eluna*>(lua_touserdata(L, lua_upvalueindex(2));
+        Eluna* E = static_cast<Eluna*>(lua_touserdata(L, lua_upvalueindex(2)));
         int args = lua_gettop(L);
         int expected = l->mfunc(E, obj);
         args = lua_gettop(L) - args;

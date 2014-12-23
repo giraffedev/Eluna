@@ -29,6 +29,8 @@ extern "C"
 // Additional lua libraries
 };
 
+using namespace HookMgr;
+
 Eluna::ScriptList Eluna::lua_scripts;
 Eluna::ScriptList Eluna::lua_extensions;
 std::string Eluna::lua_folderpath;
@@ -121,21 +123,17 @@ event_level(0),
 
 eventMgr(NULL),
 
-ServerEventBindings(new EventBind<HookMgr::ServerEvents>("ServerEvents", *this)),
-PlayerEventBindings(new EventBind<HookMgr::PlayerEvents>("PlayerEvents", *this)),
+ServerEventBindings(new EventBind<ServerEvents>("ServerEvents", *this)),
+PlayerEventBindings(new EventBind<PlayerEvents>("PlayerEvents", *this)),
 GuildEventBindings(new EventBind<HookMgr::GuildEvents>("GuildEvents", *this)),
-GroupEventBindings(new EventBind<HookMgr::GroupEvents>("GroupEvents", *this)),
-VehicleEventBindings(new EventBind<HookMgr::VehicleEvents>("VehicleEvents", *this)),
-BGEventBindings(new EventBind<HookMgr::BGEvents>("BGEvents", *this)),
+GroupEventBindings(new EventBind<GroupEvents>("GroupEvents", *this)),
+VehicleEventBindings(new EventBind<VehicleEvents>("VehicleEvents", *this)),
+BGEventBindings(new EventBind<BGEvents>("BGEvents", *this)),
 
-PacketEventBindings(new EntryBind<HookMgr::PacketEvents>("PacketEvents", *this)),
-CreatureEventBindings(new EntryBind<HookMgr::CreatureEvents>("CreatureEvents", *this)),
-CreatureGossipBindings(new EntryBind<HookMgr::GossipEvents>("GossipEvents (creature)", *this)),
-GameObjectEventBindings(new EntryBind<HookMgr::GameObjectEvents>("GameObjectEvents", *this)),
-GameObjectGossipBindings(new EntryBind<HookMgr::GossipEvents>("GossipEvents (gameobject)", *this)),
-ItemEventBindings(new EntryBind<HookMgr::ItemEvents>("ItemEvents", *this)),
-ItemGossipBindings(new EntryBind<HookMgr::GossipEvents>("GossipEvents (item)", *this)),
-playerGossipBindings(new EntryBind<HookMgr::GossipEvents>("GossipEvents (player)", *this))
+PacketEventBindings(new EntryBind<PacketEvents>("PacketEvents", *this)),
+CreatureEventBindings(new EntryBind<CreatureEvents>("CreatureEvents", *this)),
+GameObjectEventBindings(new EntryBind<GameObjectEvents>("GameObjectEvents", *this)),
+ItemEventBindings(new EntryBind<ItemEvents>("ItemEvents", *this))
 {
     // open base lua libraries
     luaL_openlibs(L);
@@ -187,12 +185,8 @@ Eluna::~Eluna()
 
     delete PacketEventBindings;
     delete CreatureEventBindings;
-    delete CreatureGossipBindings;
     delete GameObjectEventBindings;
-    delete GameObjectGossipBindings;
     delete ItemEventBindings;
-    delete ItemGossipBindings;
-    delete playerGossipBindings;
     delete BGEventBindings;
 
     ServerEventBindings = NULL;
@@ -203,12 +197,8 @@ Eluna::~Eluna()
 
     PacketEventBindings = NULL;
     CreatureEventBindings = NULL;
-    CreatureGossipBindings = NULL;
     GameObjectEventBindings = NULL;
-    GameObjectGossipBindings = NULL;
     ItemEventBindings = NULL;
-    ItemGossipBindings = NULL;
-    playerGossipBindings = NULL;
     BGEventBindings = NULL;
 
     // Must close lua state after deleting stores and mgr
@@ -674,6 +664,24 @@ template<> unsigned long Eluna::CHECKVAL<unsigned long>(lua_State* L, int narg)
     return static_cast<unsigned long>(CHECKVAL<unsigned long long>(L, narg));
 }
 
+#define CHECKVAL_ENUM(ENUM, MIN, MAX) \
+template<> ENUM Eluna::CHECKVAL<ENUM>(lua_State* L, int nargs) \
+{ \
+    int value = CheckIntegerRange(L, nargs, (int)(MIN), (int)(MAX)-1); \
+    return static_cast<ENUM>(value); \
+}
+
+CHECKVAL_ENUM(PacketEvents,         PACKET_EVENT_ON_PACKET_RECEIVE,   PACKET_EVENT_COUNT)
+CHECKVAL_ENUM(ServerEvents,         SERVER_EVENT_ON_NETWORK_START,    SERVER_EVENT_COUNT)
+CHECKVAL_ENUM(PlayerEvents,         PLAYER_EVENT_ON_CHARACTER_CREATE, PLAYER_EVENT_COUNT)
+CHECKVAL_ENUM(GroupEvents,          GROUP_EVENT_ON_MEMBER_ADD,        GROUP_EVENT_COUNT)
+CHECKVAL_ENUM(VehicleEvents,        VEHICLE_EVENT_ON_INSTALL,         VEHICLE_EVENT_COUNT)
+CHECKVAL_ENUM(CreatureEvents,       CREATURE_EVENT_ON_ENTER_COMBAT,   CREATURE_EVENT_COUNT)
+CHECKVAL_ENUM(GameObjectEvents,     GAMEOBJECT_EVENT_ON_AIUPDATE,     GAMEOBJECT_EVENT_COUNT)
+CHECKVAL_ENUM(ItemEvents,           ITEM_EVENT_ON_DUMMY_EFFECT,       ITEM_EVENT_COUNT)
+CHECKVAL_ENUM(BGEvents,             BG_EVENT_ON_START,                BG_EVENT_COUNT)
+CHECKVAL_ENUM(HookMgr::GuildEvents, GUILD_EVENT_ON_ADD_MEMBER,        GUILD_EVENT_COUNT)
+
 template<> Object* Eluna::CHECKOBJ<Object>(lua_State* L, int narg, bool error)
 {
     Object* obj = CHECKOBJ<WorldObject>(L, narg, false);
@@ -746,172 +754,100 @@ ElunaObject* Eluna::CHECKTYPE(lua_State* L, int narg, const char* tname, bool er
     return *ptrHold;
 }
 
-// Saves the function reference ID given to the register type's store for given entry under the given event
-void Eluna::Register(uint8 regtype, uint32 id, uint32 evt, int functionRef, uint32 shots)
+template<>
+void Eluna::Register(uint32 id, ServerEvents evt, int functionRef, uint32 shots)
 {
-    switch (regtype)
+    ServerEventBindings->Insert(evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, PlayerEvents evt, int functionRef, uint32 shots)
+{
+    PlayerEventBindings->Insert(evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, HookMgr::GuildEvents evt, int functionRef, uint32 shots)
+{
+    GuildEventBindings->Insert(evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, GroupEvents evt, int functionRef, uint32 shots)
+{
+    GroupEventBindings->Insert(evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, VehicleEvents evt, int functionRef, uint32 shots)
+{
+    VehicleEventBindings->Insert(evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, BGEvents evt, int functionRef, uint32 shots)
+{
+    BGEventBindings->Insert(evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, PacketEvents evt, int functionRef, uint32 shots)
+{
+    if (id >= NUM_MSG_TYPES)
     {
-        case HookMgr::REGTYPE_SERVER:
-            if (evt < HookMgr::SERVER_EVENT_COUNT)
-            {
-                ServerEventBindings->Insert(evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_PLAYER:
-            if (evt < HookMgr::PLAYER_EVENT_COUNT)
-            {
-                PlayerEventBindings->Insert(evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_GUILD:
-            if (evt < HookMgr::GUILD_EVENT_COUNT)
-            {
-                GuildEventBindings->Insert(evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_GROUP:
-            if (evt < HookMgr::GROUP_EVENT_COUNT)
-            {
-                GroupEventBindings->Insert(evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_VEHICLE:
-            if (evt < HookMgr::VEHICLE_EVENT_COUNT)
-            {
-                VehicleEventBindings->Insert(evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_BG:
-            if (evt < HookMgr::BG_EVENT_COUNT)
-            {
-                BGEventBindings->Insert(evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_PACKET:
-            if (evt < HookMgr::PACKET_EVENT_COUNT)
-            {
-                if (id >= NUM_MSG_TYPES)
-                {
-                    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                    luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
-                    return;
-                }
-
-                PacketEventBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_CREATURE:
-            if (evt < HookMgr::CREATURE_EVENT_COUNT)
-            {
-                if (!eObjectMgr->GetCreatureTemplate(id))
-                {
-                    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                    luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
-                    return;
-                }
-
-                CreatureEventBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_CREATURE_GOSSIP:
-            if (evt < HookMgr::GOSSIP_EVENT_COUNT)
-            {
-                if (!eObjectMgr->GetCreatureTemplate(id))
-                {
-                    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                    luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
-                    return;
-                }
-
-                CreatureGossipBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_GAMEOBJECT:
-            if (evt < HookMgr::GAMEOBJECT_EVENT_COUNT)
-            {
-                if (!eObjectMgr->GetGameObjectTemplate(id))
-                {
-                    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                    luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", id);
-                    return;
-                }
-
-                GameObjectEventBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_GAMEOBJECT_GOSSIP:
-            if (evt < HookMgr::GOSSIP_EVENT_COUNT)
-            {
-                if (!eObjectMgr->GetGameObjectTemplate(id))
-                {
-                    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                    luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", id);
-                    return;
-                }
-
-                GameObjectGossipBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_ITEM:
-            if (evt < HookMgr::ITEM_EVENT_COUNT)
-            {
-                if (!eObjectMgr->GetItemTemplate(id))
-                {
-                    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                    luaL_error(L, "Couldn't find a item with (ID: %d)!", id);
-                    return;
-                }
-
-                ItemEventBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_ITEM_GOSSIP:
-            if (evt < HookMgr::GOSSIP_EVENT_COUNT)
-            {
-                if (!eObjectMgr->GetItemTemplate(id))
-                {
-                    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-                    luaL_error(L, "Couldn't find a item with (ID: %d)!", id);
-                    return;
-                }
-
-                ItemGossipBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
-
-        case HookMgr::REGTYPE_PLAYER_GOSSIP:
-            if (evt < HookMgr::GOSSIP_EVENT_COUNT)
-            {
-                playerGossipBindings->Insert(id, evt, functionRef, shots);
-                return;
-            }
-            break;
+        luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
+        luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
+        return;
     }
-    luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
-    luaL_error(L, "Unknown event type (regtype %d, id %d, event %d)", regtype, id, evt);
+
+    PacketEventBindings->Insert(id, evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, CreatureEvents evt, int functionRef, uint32 shots)
+{
+    if (!eObjectMgr->GetCreatureTemplate(id))
+    {
+        luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
+        luaL_error(L, "Couldn't find a creature with (ID: %d)!", id);
+        return;
+    }
+
+    CreatureEventBindings->Insert(id, evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, GameObjectEvents evt, int functionRef, uint32 shots)
+{
+    if (!eObjectMgr->GetGameObjectTemplate(id))
+    {
+        luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
+        luaL_error(L, "Couldn't find a gameobject with (ID: %d)!", id);
+        return;
+    }
+
+    GameObjectEventBindings->Insert(id, evt, functionRef, shots);
+    return;
+}
+
+template<>
+void Eluna::Register(uint32 id, ItemEvents evt, int functionRef, uint32 shots)
+{
+    if (!eObjectMgr->GetItemTemplate(id))
+    {
+        luaL_unref(L, LUA_REGISTRYINDEX, functionRef);
+        luaL_error(L, "Couldn't find a item with (ID: %d)!", id);
+        return;
+    }
+
+    ItemEventBindings->Insert(id, evt, functionRef, shots);
+    return;
 }

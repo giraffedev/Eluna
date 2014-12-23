@@ -17,6 +17,7 @@ extern "C"
 #include "lauxlib.h"
 };
 
+template<typename T>
 class ElunaBind
 {
 public:
@@ -42,7 +43,7 @@ public:
         }
     };
     typedef std::vector<Binding*> FunctionRefVector;
-    typedef UNORDERED_MAP<int, FunctionRefVector> EventToFunctionsMap;
+    typedef UNORDERED_MAP<T, FunctionRefVector> EventToFunctionsMap;
 
     Eluna& E;
     const char* groupName;
@@ -61,7 +62,7 @@ public:
 };
 
 template<typename T>
-class EventBind : public ElunaBind
+class EventBind : public ElunaBind<T>
 {
 public:
     EventBind(const char* bindGroupName, Eluna& _E) : ElunaBind(bindGroupName, _E)
@@ -80,7 +81,7 @@ public:
         Bindings.clear();
     }
 
-    void Clear(uint32 event_id)
+    void Clear(T event_id)
     {
         for (FunctionRefVector::iterator itr = Bindings[event_id].begin(); itr != Bindings[event_id].end(); ++itr)
             delete *itr;
@@ -88,7 +89,7 @@ public:
     }
 
     // Pushes the function references and updates the counters on the binds and erases them if the counter would reach 0
-    void PushFuncRefs(lua_State* L, int event_id)
+    void PushFuncRefs(lua_State* L, T event_id)
     {
         for (FunctionRefVector::iterator it = Bindings[event_id].begin(); it != Bindings[event_id].end();)
         {
@@ -112,7 +113,7 @@ public:
             Bindings.erase(event_id);
     };
 
-    void Insert(int eventId, int funcRef, uint32 shots) // Inserts a new registered event
+    void Insert(T eventId, int funcRef, uint32 shots) // Inserts a new registered event
     {
         Bindings[eventId].push_back(new Binding(E, funcRef, shots));
     }
@@ -131,7 +132,7 @@ public:
 };
 
 template<typename T>
-class EntryBind : public ElunaBind
+class EntryBind : public ElunaBind<T>
 {
 public:
     typedef UNORDERED_MAP<uint32, EventToFunctionsMap> EntryToEventsMap;
@@ -156,15 +157,18 @@ public:
         Bindings.clear();
     }
 
-    void Clear(uint32 entry, uint32 event_id)
+    void Clear(uint32 entryId, T event_id)
     {
-        for (FunctionRefVector::iterator itr = Bindings[entry][event_id].begin(); itr != Bindings[entry][event_id].end(); ++itr)
+        FunctionRefVector& v = Bindings[entryId][event_id];
+
+        for (FunctionRefVector::iterator itr = v.begin(); itr != v.end(); ++itr)
             delete *itr;
-        Bindings[entry][event_id].clear();
+
+        v.clear();
     }
 
     // Pushes the function references and updates the counters on the binds and erases them if the counter would reach 0
-    void PushFuncRefs(lua_State* L, int event_id, uint32 entry)
+    void PushFuncRefs(lua_State* L, T event_id, uint32 entry)
     {
         for (FunctionRefVector::iterator it = Bindings[entry][event_id].begin(); it != Bindings[entry][event_id].end();)
         {
@@ -191,13 +195,13 @@ public:
             Bindings.erase(entry);
     };
 
-    void Insert(uint32 entryId, int eventId, int funcRef, uint32 shots) // Inserts a new registered event
+    void Insert(uint32 entryId, T eventId, int funcRef, uint32 shots) // Inserts a new registered event
     {
         Bindings[entryId][eventId].push_back(new Binding(E, funcRef, shots));
     }
 
     // Returns true if the entry has registered binds
-    bool HasEvents(uint32 entryId, int eventId) const
+    bool HasEvents(uint32 entryId, T eventId) const
     {
         if (Bindings.empty())
             return false;

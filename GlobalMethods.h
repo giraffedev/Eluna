@@ -9,6 +9,8 @@
 
 #include "ElunaBinding.h"
 
+using namespace HookMgr;
+
 /***
  * These functions can be used anywhere at any time, including at start-up.
  */
@@ -484,31 +486,33 @@ namespace LuaGlobalFunctions
         return 1;
     }
 
-    static void RegisterEntryHelper(Eluna* E, lua_State* L, int regtype)
+    template<typename T>
+    static void RegisterEntryHelper(Eluna* E, lua_State* L)
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 ev = Eluna::CHECKVAL<uint32>(L, 2);
+        T ev = Eluna::CHECKVAL<T>(L, 2);
         luaL_checktype(L, 3, LUA_TFUNCTION);
         uint32 shots = Eluna::CHECKVAL<uint32>(L, 4, 0);
 
         lua_pushvalue(L, 3);
         int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         if (functionRef >= 0)
-            E->Register(regtype, entry, ev, functionRef, shots);
+            E->Register(entry, ev, functionRef, shots);
         else
             luaL_argerror(L, 3, "unable to make a ref to function");
     }
 
-    static void RegisterEventHelper(Eluna* E, lua_State* L, int regtype)
+    template<typename T>
+    static void RegisterEventHelper(Eluna* E, lua_State* L)
     {
-        uint32 ev = Eluna::CHECKVAL<uint32>(L, 1);
+        T ev = Eluna::CHECKVAL<T>(L, 1);
         luaL_checktype(L, 2, LUA_TFUNCTION);
         uint32 shots = Eluna::CHECKVAL<uint32>(L, 3, 0);
 
         lua_pushvalue(L, 2);
         int functionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         if (functionRef >= 0)
-            E->Register(regtype, 0, ev, functionRef, shots);
+            E->Register(0, ev, functionRef, shots);
         else
             luaL_argerror(L, 2, "unable to make a ref to function");
     }
@@ -577,7 +581,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterServerEvent(Eluna* E, lua_State* L)
     {
-        RegisterEventHelper(E, L, HookMgr::REGTYPE_SERVER);
+        RegisterEventHelper<ServerEvents>(E, L);
         return 0;
     }
 
@@ -642,7 +646,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterPlayerEvent(Eluna* E, lua_State* L)
     {
-        RegisterEventHelper(E, L, HookMgr::REGTYPE_PLAYER);
+        RegisterEventHelper<PlayerEvents>(E, L);
         return 0;
     }
 
@@ -675,7 +679,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterGuildEvent(Eluna* E, lua_State* L)
     {
-        RegisterEventHelper(E, L, HookMgr::REGTYPE_GUILD);
+        RegisterEventHelper<HookMgr::GuildEvents>(E, L);
         return 0;
     }
 
@@ -703,7 +707,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterGroupEvent(Eluna* E, lua_State* L)
     {
-        RegisterEventHelper(E, L, HookMgr::REGTYPE_GROUP);
+        RegisterEventHelper<GroupEvents>(E, L);
         return 0;
     }
 
@@ -727,7 +731,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterBGEvent(Eluna* E, lua_State* L)
     {
-        RegisterEventHelper(E, L, HookMgr::REGTYPE_BG);
+        RegisterEventHelper<BGEvents>(E, L);
         return 0;
     }
 
@@ -752,53 +756,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterPacketEvent(Eluna* E, lua_State* L)
     {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_PACKET);
-        return 0;
-    }
-
-    /**
-     * Registers a [Creature] gossip event handler.
-     *
-     * <pre>
-     * enum GossipEvents
-     * {
-     *     GOSSIP_EVENT_ON_HELLO                           = 1,    // (event, player, object) - Object is the Creature/GameObject/Item. For item gossip can return false to stop spell *casting.
-     *     GOSSIP_EVENT_ON_SELECT                          = 2,    // (event, player, object, sender, intid, code, menu_id) - Object is the Creature/GameObject/Item/Player, menu_id is *only for player gossip
-     *     GOSSIP_EVENT_COUNT
-     * };
-     * </pre>
-     *
-     * @param uint32 menu_id : [Creature] entry Id
-     * @param uint32 event : [Creature] gossip event Id, refer to GossipEvents above
-     * @param function function : function to register
-     * @param uint32 shots = 0 : the number of times the function will be called, 0 means "always call this function"
-     */
-    int RegisterCreatureGossipEvent(Eluna* E, lua_State* L)
-    {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_CREATURE_GOSSIP);
-        return 0;
-    }
-
-    /**
-     * Registers a [GameObject] gossip event handler.
-     *
-     * <pre>
-     * enum GossipEvents
-     * {
-     *     GOSSIP_EVENT_ON_HELLO                           = 1,    // (event, player, object) - Object is the Creature/GameObject/Item. For item gossip can return false to stop spell *casting.
-     *     GOSSIP_EVENT_ON_SELECT                          = 2,    // (event, player, object, sender, intid, code, menu_id) - Object is the Creature/GameObject/Item/Player, menu_id is *only for player gossip
-     *     GOSSIP_EVENT_COUNT
-     * };
-     * </pre>
-     *
-     * @param uint32 menu_id : [GameObject] entry Id
-     * @param uint32 event : [GameObject] gossip event Id, refer to GossipEvents above
-     * @param function function : function to register
-     * @param uint32 shots = 0 : the number of times the function will be called, 0 means "always call this function"
-     */
-    int RegisterGameObjectGossipEvent(Eluna* E, lua_State* L)
-    {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_GAMEOBJECT_GOSSIP);
+        RegisterEntryHelper<PacketEvents>(E, L);
         return 0;
     }
 
@@ -824,53 +782,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterItemEvent(Eluna* E, lua_State* L)
     {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_ITEM);
-        return 0;
-    }
-
-    /**
-     * Registers an [Item] gossip event handler.
-     *
-     * <pre>
-     * enum GossipEvents
-     * {
-     *     GOSSIP_EVENT_ON_HELLO                           = 1,    // (event, player, object) - Object is the Creature/GameObject/Item. For item gossip can return false to stop spell *casting.
-     *     GOSSIP_EVENT_ON_SELECT                          = 2,    // (event, player, object, sender, intid, code, menu_id) - Object is the Creature/GameObject/Item/Player, menu_id is *only for player gossip
-     *     GOSSIP_EVENT_COUNT
-     * };
-     * </pre>
-     *
-     * @param uint32 entry : [Item] entry Id
-     * @param uint32 event : [Item] gossip event Id, refer to GossipEvents above
-     * @param function function : function to register
-     * @param uint32 shots = 0 : the number of times the function will be called, 0 means "always call this function"
-     */
-    int RegisterItemGossipEvent(Eluna* E, lua_State* L)
-    {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_ITEM_GOSSIP);
-        return 0;
-    }
-
-    /**
-     * Registers a [Player] gossip event handler.
-     *
-     * <pre>
-     * enum GossipEvents
-     * {
-     *     GOSSIP_EVENT_ON_HELLO                           = 1,    // (event, player, object) - Object is the Creature/GameObject/Item. For item gossip can return false to stop spell *casting.
-     *     GOSSIP_EVENT_ON_SELECT                          = 2,    // (event, player, object, sender, intid, code, menu_id) - Object is the Creature/GameObject/Item/Player, menu_id is *only for player gossip
-     *     GOSSIP_EVENT_COUNT
-     * };
-     * </pre>
-     *
-     * @param uint32 menu_id : [Player] gossip menu Id
-     * @param uint32 event : [Player] gossip event Id, refer to GossipEvents above
-     * @param function function : function to register
-     * @param uint32 shots = 0 : the number of times the function will be called, 0 means "always call this function"
-     */
-    int RegisterPlayerGossipEvent(Eluna* E, lua_State* L)
-    {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_PLAYER_GOSSIP);
+        RegisterEntryHelper<ItemEvents>(E, L);
         return 0;
     }
 
@@ -928,7 +840,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterCreatureEvent(Eluna* E, lua_State* L)
     {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_CREATURE);
+        RegisterEntryHelper<CreatureEvents>(E, L);
         return 0;
     }
 
@@ -962,7 +874,7 @@ namespace LuaGlobalFunctions
      */
     int RegisterGameObjectEvent(Eluna* E, lua_State* L)
     {
-        RegisterEntryHelper(E, L, HookMgr::REGTYPE_GAMEOBJECT);
+        RegisterEntryHelper<GameObjectEvents>(E, L);
         return 0;
     }
 
@@ -2347,7 +2259,7 @@ namespace LuaGlobalFunctions
      */
     int ClearBattleGroundEvents(Eluna* E, lua_State* L)
     {
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 1);
+        BGEvents event_type = Eluna::CHECKVAL<BGEvents>(L, 1);
         E->BGEventBindings->Clear(event_type);
         return 0;
     }
@@ -2361,22 +2273,8 @@ namespace LuaGlobalFunctions
     int ClearCreatureEvents(Eluna* E, lua_State* L)
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
+        CreatureEvents event_type = Eluna::CHECKVAL<CreatureEvents>(L, 2);
         E->CreatureEventBindings->Clear(entry, event_type);
-        return 0;
-    }
-
-    /**
-     * Unbinds all event handlers for a particular [Creature] gossip event/entry combination.
-     *
-     * @param uint32 entry : the ID of a [Creature] whose handlers will be cleared
-     * @param uint32 event_type : the event whose handlers will be cleared, see [Global:RegisterCreatureGossipEvent]
-     */
-    int ClearCreatureGossipEvents(Eluna* E, lua_State* L)
-    {
-        uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
-        E->CreatureGossipBindings->Clear(entry, event_type);
         return 0;
     }
 
@@ -2389,22 +2287,8 @@ namespace LuaGlobalFunctions
     int ClearGameObjectEvents(Eluna* E, lua_State* L)
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
+        GameObjectEvents event_type = Eluna::CHECKVAL<GameObjectEvents>(L, 2);
         E->GameObjectEventBindings->Clear(entry, event_type);
-        return 0;
-    }
-
-    /**
-     * Unbinds all event handlers for a particular [GameObject] gossip event/entry combination.
-     *
-     * @param uint32 entry : the ID of a [GameObject] whose handlers will be cleared
-     * @param uint32 event_type : the event whose handlers will be cleared, see [Global:RegisterGameObjectGossipEvent]
-     */
-    int ClearGameObjectGossipEvents(Eluna* E, lua_State* L)
-    {
-        uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
-        E->GameObjectGossipBindings->Clear(entry, event_type);
         return 0;
     }
 
@@ -2415,7 +2299,7 @@ namespace LuaGlobalFunctions
      */
     int ClearGroupEvents(Eluna* E, lua_State* L)
     {
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 1);
+        GroupEvents event_type = Eluna::CHECKVAL<GroupEvents>(L, 1);
         E->GroupEventBindings->Clear(event_type);
         return 0;
     }
@@ -2427,7 +2311,7 @@ namespace LuaGlobalFunctions
      */
     int ClearGuildEvents(Eluna* E, lua_State* L)
     {
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 1);
+        HookMgr::GuildEvents event_type = Eluna::CHECKVAL<HookMgr::GuildEvents>(L, 1);
         E->GuildEventBindings->Clear(event_type);
         return 0;
     }
@@ -2441,22 +2325,8 @@ namespace LuaGlobalFunctions
     int ClearItemEvents(Eluna* E, lua_State* L)
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
+        ItemEvents event_type = Eluna::CHECKVAL<ItemEvents>(L, 2);
         E->ItemEventBindings->Clear(entry, event_type);
-        return 0;
-    }
-
-    /**
-     * Unbinds all event handlers for a particular [Item] gossip event/entry combination.
-     *
-     * @param uint32 entry : the ID of a [] whose handlers will be cleared
-     * @param uint32 event_type : the event whose handlers will be cleared, see [Global:RegisterItemGossipEvent]
-     */
-    int ClearItemGossipEvents(Eluna* E, lua_State* L)
-    {
-        uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
-        E->ItemGossipBindings->Clear(entry, event_type);
         return 0;
     }
 
@@ -2469,7 +2339,7 @@ namespace LuaGlobalFunctions
     int ClearPacketEvents(Eluna* E, lua_State* L)
     {
         uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
+        PacketEvents event_type = Eluna::CHECKVAL<PacketEvents>(L, 2);
         E->PacketEventBindings->Clear(entry, event_type);
         return 0;
     }
@@ -2481,22 +2351,8 @@ namespace LuaGlobalFunctions
      */
     int ClearPlayerEvents(Eluna* E, lua_State* L)
     {
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 1);
+        PlayerEvents event_type = Eluna::CHECKVAL<PlayerEvents>(L, 1);
         E->PlayerEventBindings->Clear(event_type);
-        return 0;
-    }
-
-    /**
-     * Unbinds all event handlers for a particular [Player] gossip event.
-     *
-     * @param uint32 entry : the ID of a [] whose handlers will be cleared
-     * @param uint32 event_type : the event whose handlers will be cleared, see [Global:RegisterPlayerGossipEvent]
-     */
-    int ClearPlayerGossipEvents(Eluna* E, lua_State* L)
-    {
-        uint32 entry = Eluna::CHECKVAL<uint32>(L, 1);
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 2);
-        E->playerGossipBindings->Clear(entry, event_type);
         return 0;
     }
 
@@ -2507,7 +2363,7 @@ namespace LuaGlobalFunctions
      */
     int ClearServerEvents(Eluna* E, lua_State* L)
     {
-        uint32 event_type = Eluna::CHECKVAL<uint32>(L, 1);
+        ServerEvents event_type = Eluna::CHECKVAL<ServerEvents>(L, 1);
         E->ServerEventBindings->Clear(event_type);
         return 0;
     }

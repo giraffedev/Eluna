@@ -47,26 +47,18 @@ ElunaGlobal::ElunaRegister GlobalMethods[] =
     { "RegisterGuildEvent", &LuaGlobalFunctions::RegisterGuildEvent },                         // RegisterGuildEvent(event, function)
     { "RegisterGroupEvent", &LuaGlobalFunctions::RegisterGroupEvent },                         // RegisterGroupEvent(event, function)
     { "RegisterCreatureEvent", &LuaGlobalFunctions::RegisterCreatureEvent },                   // RegisterCreatureEvent(entry, event, function)
-    { "RegisterCreatureGossipEvent", &LuaGlobalFunctions::RegisterCreatureGossipEvent },       // RegisterCreatureGossipEvent(entry, event, function)
     { "RegisterGameObjectEvent", &LuaGlobalFunctions::RegisterGameObjectEvent },               // RegisterGameObjectEvent(entry, event, function)
-    { "RegisterGameObjectGossipEvent", &LuaGlobalFunctions::RegisterGameObjectGossipEvent },   // RegisterGameObjectGossipEvent(entry, event, function)
     { "RegisterItemEvent", &LuaGlobalFunctions::RegisterItemEvent },                           // RegisterItemEvent(entry, event, function)
-    { "RegisterItemGossipEvent", &LuaGlobalFunctions::RegisterItemGossipEvent },               // RegisterItemGossipEvent(entry, event, function)
-    { "RegisterPlayerGossipEvent", &LuaGlobalFunctions::RegisterPlayerGossipEvent },           // RegisterPlayerGossipEvent(menu_id, event, function)
     { "RegisterBGEvent", &LuaGlobalFunctions::RegisterBGEvent },                               // RegisterBGEvent(event, function)
 
     { "ClearBattleGroundEvents", &LuaGlobalFunctions::ClearBattleGroundEvents },
     { "ClearCreatureEvents", &LuaGlobalFunctions::ClearCreatureEvents },
-    { "ClearCreatureGossipEvents", &LuaGlobalFunctions::ClearCreatureGossipEvents },
     { "ClearGameObjectEvents", &LuaGlobalFunctions::ClearGameObjectEvents },
-    { "ClearGameObjectGossipEvents", &LuaGlobalFunctions::ClearGameObjectGossipEvents },
     { "ClearGroupEvents", &LuaGlobalFunctions::ClearGroupEvents },
     { "ClearGuildEvents", &LuaGlobalFunctions::ClearGuildEvents },
     { "ClearItemEvents", &LuaGlobalFunctions::ClearItemEvents },
-    { "ClearItemGossipEvents", &LuaGlobalFunctions::ClearItemGossipEvents },
     { "ClearPacketEvents", &LuaGlobalFunctions::ClearPacketEvents },
     { "ClearPlayerEvents", &LuaGlobalFunctions::ClearPlayerEvents },
-    { "ClearPlayerGossipEvents", &LuaGlobalFunctions::ClearPlayerGossipEvents },
     { "ClearServerEvents", &LuaGlobalFunctions::ClearServerEvents },
 
     // Getters

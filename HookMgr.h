@@ -9,25 +9,6 @@
 
 namespace HookMgr
 {
-    enum RegisterTypes
-    {
-        REGTYPE_PACKET,
-        REGTYPE_SERVER,
-        REGTYPE_PLAYER,
-        REGTYPE_GUILD,
-        REGTYPE_GROUP,
-        REGTYPE_CREATURE,
-        REGTYPE_VEHICLE,
-        REGTYPE_CREATURE_GOSSIP,
-        REGTYPE_GAMEOBJECT,
-        REGTYPE_GAMEOBJECT_GOSSIP,
-        REGTYPE_ITEM,
-        REGTYPE_ITEM_GOSSIP,
-        REGTYPE_PLAYER_GOSSIP,
-        REGTYPE_BG,
-        REGTYPE_COUNT
-    };
-
     // RegisterPacketEvent(Opcode, event, function)
     enum PacketEvents
     {
@@ -141,6 +122,7 @@ namespace HookMgr
         // UNUSED                               =     40,       // (event, player)
         // UNUSED                               =     41,       // (event, player)
         PLAYER_EVENT_ON_COMMAND                 =     42,       // (event, player, command) - player is nil if command used from console. Can return false
+        PLAYER_EVENT_ON_GOSSIP_SELECT           =     43,       // (event, player, sender, intid, code)
 
         PLAYER_EVENT_COUNT
     };
@@ -231,6 +213,9 @@ namespace HookMgr
         CREATURE_EVENT_ON_DIALOG_STATUS                   = 35, // (event, player, creature)
         CREATURE_EVENT_ON_ADD                             = 36, // (event, creature)
         CREATURE_EVENT_ON_REMOVE                          = 37, // (event, creature)
+        CREATURE_EVENT_ON_GOSSIP_HELLO                    = 38, // (event, player, creature)
+        CREATURE_EVENT_ON_GOSSIP_SELECT                   = 39, // (event, player, creature, sender, intid, code)
+
         CREATURE_EVENT_COUNT
     };
 
@@ -250,6 +235,9 @@ namespace HookMgr
         // UNUSED                                       = 11,   // (event, gameobject)
         GAMEOBJECT_EVENT_ON_ADD                         = 12,   // (event, gameobject)
         GAMEOBJECT_EVENT_ON_REMOVE                      = 13,   // (event, gameobject)
+        GAMEOBJECT_EVENT_ON_GOSSIP_HELLO                = 14,   // (event, player, gameobject)
+        GAMEOBJECT_EVENT_ON_GOSSIP_SELECT               = 15,   // (event, player, gameobject, sender, intid, code)
+
         GAMEOBJECT_EVENT_COUNT
     };
 
@@ -261,18 +249,10 @@ namespace HookMgr
         ITEM_EVENT_ON_QUEST_ACCEPT                      = 3,    // (event, player, item, quest)
         ITEM_EVENT_ON_EXPIRE                            = 4,    // (event, player, itemid)
         ITEM_EVENT_ON_REMOVE                            = 5,    // (event, player, item)
-        ITEM_EVENT_COUNT
-    };
+        ITEM_EVENT_ON_GOSSIP_HELLO                      = 6,    // (event, player, item) - For item gossip can return false to stop spell casting.
+        ITEM_EVENT_ON_GOSSIP_SELECT                     = 7,    // (event, player, item, sender, intid, code)
 
-    // RegisterCreatureGossipEvent(entry, EventId, function)
-    // RegisterGameObjectGossipEvent(entry, EventId, function)
-    // RegisterItemGossipEvent(entry, EventId, function)
-    // RegisterPlayerGossipEvent(menu_id, EventId, function)
-    enum GossipEvents
-    {
-        GOSSIP_EVENT_ON_HELLO                           = 1,    // (event, player, object) - Object is the Creature/GameObject/Item. For item gossip can return false to stop spell casting.
-        GOSSIP_EVENT_ON_SELECT                          = 2,    // (event, player, object, sender, intid, code, menu_id) - Object is the Creature/GameObject/Item/Player, menu_id is only for player gossip
-        GOSSIP_EVENT_COUNT
+        ITEM_EVENT_COUNT
     };
 
     // RegisterBGEvent(EventId, function)
@@ -282,6 +262,7 @@ namespace HookMgr
         BG_EVENT_ON_END                                 = 2,    // (event, bg, bgId, instanceId, winner) - Needs to be added to TC
         BG_EVENT_ON_CREATE                              = 3,    // (event, bg, bgId, instanceId) - Needs to be added to TC
         BG_EVENT_ON_PRE_DESTROY                         = 4,    // (event, bg, bgId, instanceId) - Needs to be added to TC
+
         BG_EVENT_COUNT
     };
 };

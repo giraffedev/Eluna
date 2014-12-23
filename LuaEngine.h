@@ -130,12 +130,8 @@ public:
 
     EntryBind<HookMgr::PacketEvents>*       PacketEventBindings;
     EntryBind<HookMgr::CreatureEvents>*     CreatureEventBindings;
-    EntryBind<HookMgr::GossipEvents>*       CreatureGossipBindings;
     EntryBind<HookMgr::GameObjectEvents>*   GameObjectEventBindings;
-    EntryBind<HookMgr::GossipEvents>*       GameObjectGossipBindings;
     EntryBind<HookMgr::ItemEvents>*         ItemEventBindings;
-    EntryBind<HookMgr::GossipEvents>*       ItemGossipBindings;
-    EntryBind<HookMgr::GossipEvents>*       playerGossipBindings;
 
     Eluna();
     ~Eluna();
@@ -154,7 +150,7 @@ public:
 
     static void report(lua_State*);
     void ExecuteCall(int params, int res);
-    void Register(uint8 reg, uint32 id, uint32 evt, int func, uint32 shots);
+    template<typename T> void Register(uint32 id, T evt, int func, uint32 shots);
     void RunScripts();
     void InvalidateObjects();
 
